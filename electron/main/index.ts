@@ -1,4 +1,14 @@
-import {app, BrowserWindow, shell, ipcMain, globalShortcut} from 'electron'
+import {
+    app,
+    BrowserWindow,
+    shell,
+    ipcMain,
+    globalShortcut,
+    MenuItemConstructorOptions,
+    MenuItem,
+    Menu,
+    Tray
+} from 'electron'
 import {release} from 'node:os'
 import {join} from 'node:path'
 import path from "path";
@@ -13,13 +23,14 @@ import path from "path";
 // ├─┬ dist
 // │ └── index.html    > Electron-Renderer
 //
+
 process.env.DIST_ELECTRON = join(__dirname, '..')
 process.env.DIST = join(process.env.DIST_ELECTRON, '../dist')
 process.env.PUBLIC = process.env.VITE_DEV_SERVER_URL
     ? join(process.env.DIST_ELECTRON, '../public')
     : process.env.DIST
-
 //禁止程序多开，此处需要单例锁的打开注释即可
+
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
     app.quit();
@@ -45,12 +56,54 @@ let win: BrowserWindow | null = null
 const preload = join(__dirname, '../preload/index.js')
 const url = process.env.VITE_DEV_SERVER_URL
 const indexHtml = join(process.env.DIST, 'index.html')
+const isMac = process.platform === 'darwin'
+const menuBars: (MenuItemConstructorOptions | MenuItem)[] = [
+    ...(isMac ? [{
+        label: 'App Name',
+        submenu: [
+            {role: 'about'},
+            {type: 'separator'},
+            {role: 'services'},
+            {type: 'separator'},
+            {role: 'hide'},
+            {role: 'hideothers'},
+            {role: 'unhide'},
+            {type: 'separator'},
+            {role: 'quit'}
+        ]
+    }] : []),]
+// submenu: [
+//     {role: 'about'},
+//     {role: 'settings'},
+//     {type: 'separator'},
+//     {role: 'services'},
+//     {type: 'separator'},
+//     {type: 'separator'},
+//     {role: 'quit'}
+// ]
 
+
+// {
+//     role: 'help',
+//     submenu: [
+//         {
+//             label: 'Learn More',
+//             click: async () => {
+//                 const {shell} = require('electron')
+//                 await shell.openExternal('https://electronjs.org')
+//             }
+//         }
+//     ]
+// }
 async function createWindow() {
     win = new BrowserWindow({
         // title: 'Main window',
         width: 920,
         height: 580,
+        minWidth: 920,
+        minHeight: 580,
+        // autoHideMenuBar: true,
+        // frame: true,
         titleBarStyle: 'hiddenInset',
         icon: path.join(__dirname, 'assets/icon.png'),
         webPreferences: {
@@ -60,9 +113,10 @@ async function createWindow() {
             // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
             nodeIntegration: true,
             contextIsolation: false,
-            webSecurity: false,
+            webSecurity: true,
             // 如果是开发模式可以使用devTools 调试
-            devTools: process.env.NODE_ENV === "development",
+            // devTools: process.env.NODE_ENV === "development",
+            devTools: true,
             // 在macos中启用橡皮动画
             scrollBounce: process.platform === "darwin",
         },
@@ -91,12 +145,31 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
-    createWindow();
-    globalShortcut.register('CommandOrControl+Q', () => {
-        // 当用户按下快捷键时，手动触发 before-quit 事件
-        app.emit('before-quit');
-    });
-})
+        createWindow();
+        // --------------------------------托盘--------------------------------
+
+        const trayModel = new Tray(path.join(__dirname, '../../src/static/tray.png'))
+        const contextMenu = Menu.buildFromTemplate([
+            {
+                role: 'quit',
+                label: '退出',
+                click: () => {
+                    app.quit()
+                }
+            }
+        ])
+        trayModel.setToolTip(app.name)
+        trayModel.on('right-click', () => {
+            trayModel.popUpContextMenu(contextMenu)
+        })
+        trayModel.on('click', (e, bounds) => {
+            win ? win.show() : createWindow()
+        })
+        // --------------------------------托盘--------------------------------
+        const menu = Menu.buildFromTemplate(menuBars)
+        Menu.setApplicationMenu(menu)
+    }
+)
 
 app.on('window-all-closed', () => {
     console.log('window-all-closed')
@@ -144,3 +217,11 @@ ipcMain.handle('open-win', (_, arg) => {
         childWindow.loadFile(indexHtml, {hash: arg})
     }
 })
+
+ipcMain.handle('getAppPath', () => {
+    return app.getAppPath();
+})
+
+ipcMain.handle('getName', (event) => {
+    return app.getName();
+});

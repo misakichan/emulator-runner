@@ -11,3 +11,4 @@ lstat(cwd()).then(stats => {
 }).catch(err => {
   console.error(err)
 })
+
