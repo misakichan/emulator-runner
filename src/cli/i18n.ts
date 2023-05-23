@@ -1,27 +1,30 @@
-import {createI18n, useI18n} from "vue-i18n";
-// import {app} from 'electron'
-import zh from "./zh";
-import en from "./en";
-import * as os from "os";
+import {ipcRenderer} from 'electron';
+import {getConfig} from "./config";
+import {useToast} from "vue-toastification";
 
-let locale = localStorage.getItem('locale') ?? navigator.language
-const information = document.getElementById('info')
-try {
-    const config = require(`${os.homedir()}/.emulator-runner/config.json`);
-    locale = config.languageSelected ?? locale
-    if (locale === "auto") locale = navigator.language
-    console.debug("system default language1: " + locale)
-} catch (e) {
-    // console.log(`${os.homedir()}/.${remote.app.getName()}/config.json`)
-    console.debug("system default language2: " + locale, e)
+const toast = useToast()
+
+/**
+ * @param key
+ * @return {string}
+ */
+export function t(key: any): any {
+    return ipcRenderer.sendSync('i18n', key);
 }
 
-const i18n = createI18n({
-    legacy: true,
-    locale: locale, // 使用系统语言
-    fallbackLocale: locale,
-    globalInjection: true,
-    messages: {'zh-CN': zh, 'en-US': en}
-})
+export function i18nSetLocale(value: string) {
+    let LANG = value
+    if (!value) {
+        LANG = navigator.language ?? 'en-US'
+        const item = getConfig()
+        if (!item) {
+            toast.error(t('configError'))
+        }
+        if (item.languageSelected) {
+            LANG = item.languageSelected
+        }
+    }
+    if (value === "auto" || LANG === "auto") LANG = navigator.language ?? 'en-US'
 
-export default i18n
+    ipcRenderer.sendSync('i18n-setLocale', LANG)
+}

@@ -3,15 +3,20 @@ import {
     BrowserWindow,
     shell,
     ipcMain,
+    webContents,
     globalShortcut,
     MenuItemConstructorOptions,
     MenuItem,
     Menu,
-    Tray
+    Tray, dialog
 } from 'electron'
 import {release} from 'node:os'
 import {join} from 'node:path'
 import path from "path";
+import i18n from "i18n";
+import os from "os";
+import {spawn} from "child_process";
+import * as fs from "fs";
 
 // The built directory structure
 //
@@ -29,12 +34,22 @@ process.env.DIST = join(process.env.DIST_ELECTRON, '../dist')
 process.env.PUBLIC = process.env.VITE_DEV_SERVER_URL
     ? join(process.env.DIST_ELECTRON, '../public')
     : process.env.DIST
-//禁止程序多开，此处需要单例锁的打开注释即可
 
+//禁止程序多开，此处需要单例锁的打开注释即可
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
     app.quit();
 }
+
+// 多语言化
+i18n.configure({
+    locales: ["zh-CN", "en-US"],
+    directory: path.join(app.getAppPath(), "locales"),
+    defaultLocale: 'en-US',
+    register: global,
+});
+
+
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration()
 
@@ -45,6 +60,9 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
     process.exit(0)
 }
+let configFilePath = `${os.homedir()}/.${app.getName().toLowerCase().replace(/\s+/g, '-')}/config.json`
+
+// ----------------------------------------------------------------------
 
 // Remove electron security warnings
 // This warning only shows in development mode
@@ -57,21 +75,6 @@ const preload = join(__dirname, '../preload/index.js')
 const url = process.env.VITE_DEV_SERVER_URL
 const indexHtml = join(process.env.DIST, 'index.html')
 const isMac = process.platform === 'darwin'
-const menuBars: (MenuItemConstructorOptions | MenuItem)[] = [
-    ...(isMac ? [{
-        label: 'App Name',
-        submenu: [
-            {role: 'about'},
-            {type: 'separator'},
-            {role: 'services'},
-            {type: 'separator'},
-            {role: 'hide'},
-            {role: 'hideothers'},
-            {role: 'unhide'},
-            {type: 'separator'},
-            {role: 'quit'}
-        ]
-    }] : []),]
 // submenu: [
 //     {role: 'about'},
 //     {role: 'settings'},
@@ -144,6 +147,7 @@ async function createWindow() {
     // win.webContents.on('will-navigate', (event, url) => { }) #344
 }
 
+
 app.whenReady().then(() => {
         createWindow();
         // --------------------------------托盘--------------------------------
@@ -152,7 +156,7 @@ app.whenReady().then(() => {
         const contextMenu = Menu.buildFromTemplate([
             {
                 role: 'quit',
-                label: '退出',
+                label: i18n.__('exit'),
                 click: () => {
                     app.quit()
                 }
@@ -166,8 +170,11 @@ app.whenReady().then(() => {
             win ? win.show() : createWindow()
         })
         // --------------------------------托盘--------------------------------
-        const menu = Menu.buildFromTemplate(menuBars)
-        Menu.setApplicationMenu(menu)
+        // const menu = Menu.buildFromTemplate(menuBars)
+        // Menu.setApplicationMenu(menu)
+        setTimeout(() => {
+            // getConfig.getConfig()
+        }, 2000)
     }
 )
 
@@ -218,10 +225,113 @@ ipcMain.handle('open-win', (_, arg) => {
     }
 })
 
-ipcMain.handle('getAppPath', () => {
-    return app.getAppPath();
+
+// ----------------------------------------------------------------------
+ipcMain.on('i18n', (event, arg) => {
+    event.returnValue = i18n.__(arg)
+})
+ipcMain.on('i18n-setLocale', (event, arg) => {
+    i18n.setLocale(arg)
+    event.returnValue = true
 })
 
-ipcMain.handle('getName', (event) => {
-    return app.getName();
-});
+ipcMain.on('getAppPath', (event) => {
+    // event.reply('getAppPath-reply', i18nConfig.directory)
+    event.returnValue = app.getAppPath()
+    return
+})
+ipcMain.on('saveConfig', (event, args) => {
+    let item = getConfigHandle()
+    if (item.error) {
+        event.returnValue = item
+        return;
+    }
+    if (JSON.stringify(item.result) === args || !args) {
+        item.msg = i18n.__('configNoChange')
+        event.returnValue = item
+        return;
+    }
+    try {
+        fs.writeFileSync(configFilePath, args, {encoding: 'utf8', flag: 'w'})
+    } catch (e) {
+        console.log(e)
+        event.returnValue = {error: e, msg: i18n.__('saveConfigError'), result: args}
+        return
+    }
+    event.returnValue = {error: null, msg: i18n.__('saveConfigSuccess'), result: args}
+})
+ipcMain.on('getConfig', (event, args) => {
+    event.returnValue = getConfigHandle()
+    return;
+})
+
+ipcMain.on('openConfig', (event, args) => {
+    let item = getConfigHandle()
+    if (item.error) {
+        event.returnValue = item
+        return;
+    }
+    if (process.platform === 'darwin') {
+        // macOS 上使用默认应用程序打开文件
+        spawn('open', [path.dirname(configFilePath)]);
+        spawn('open', [configFilePath]);
+    } else if (process.platform === 'win32') {
+        // Windows 上使用记事本打开文件
+        spawn('notepad.exe', [path.dirname(configFilePath)]);
+        spawn('explorer', [configFilePath]);
+    } else {
+        // Linux 上使用默认文本编辑器打开文件
+        spawn('xdg-open', [configFilePath]);
+        spawn('xdg-open', [configFilePath]);
+    }
+    item.msg = i18n.__('openConfigSuccess')
+    item.result = args
+    event.returnValue = item
+    return
+})
+
+function getConfigHandle(): { error: Error, msg: string, result: any } {
+    let item = initConfigHandle()
+    if (item.error) {
+        console.log("getConfigHandle error", item.error)
+        return Object.assign({}, item, {result: {}})
+    }
+    let configJson: any
+    try {
+        configJson = JSON.parse(fs.readFileSync(configFilePath).toString())
+    } catch (e) {
+        return {error: e, msg: i18n.__('readConfigError'), result: {}};
+    }
+    if (!configJson.languageSelected) return {error: new Error("configError"), msg: i18n.__('configError'), result: {}};
+
+    return {error: null, msg: i18n.__('getConfigSuccess'), result: configJson}
+}
+
+function initConfigHandle(): { error: Error, msg: string } {
+    if (!fs.existsSync(path.dirname(configFilePath))) {
+        console.log("initConfigHandle dir")
+        try {
+            fs.mkdirSync(path.dirname(configFilePath))
+        } catch (e) {
+            return {error: e, msg: i18n.__('makeConfigDirError')}
+        }
+    }
+    if (!fs.existsSync(configFilePath)) {
+        console.log("initConfigHandle file")
+        try {
+            fs.writeFileSync(configFilePath, fs.readFileSync("/Users/xr/Downloads/config.json"), {
+                encoding: 'utf8',
+                flag: 'w'
+            })
+        } catch (e) {
+            return {error: e, msg: i18n.__('touchConfigError')}
+        }
+    }
+    return {error: null, msg: ''}
+}
+
+// ----------------------------------------------------------------------
+
+
+
+

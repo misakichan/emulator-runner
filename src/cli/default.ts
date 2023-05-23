@@ -1,7 +1,8 @@
 import {getCurrentInstance} from "vue";
-import i18n from "../cli/i18n";
-const global = i18n.global
-const t = global.t
+
+const t = function (value: string) {
+    return value
+}
 export default {
     proxySelectedOption: [
         {key: 'none', text: t("none"), value: ""},
@@ -13,7 +14,7 @@ export default {
     githubSelectedOption: [
         {key: 'none', text: t("none")},
         {key: 'ghproxy', text: "ghproxy"},
-         {key: 'custom', text: t("custom")}
+        {key: 'custom', text: t("custom")}
     ],
     languageOptions: [
         {key: 'zh-CN', text: '中文'},

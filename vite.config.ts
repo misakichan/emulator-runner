@@ -58,7 +58,7 @@ export default defineConfig(({command}) => {
                             },
                         },
                     },
-                }
+                },
             ]),
             // Use Node.js API in the Renderer-process
             renderer(),

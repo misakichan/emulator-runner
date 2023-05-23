@@ -1,92 +1,39 @@
-import path from "path";
+import {ipcRenderer} from 'electron';
 import {useToast} from "vue-toastification";
-import * as fs from "fs";
-import {spawn} from "child_process";
-import i18n from "./i18n";
+import {t} from './i18n'
 
-const global =i18n.global
-const t = global.t
-const homeDir = process.env.HOME
-const appName = process.env.npm_package_name
-const configFileName = 'config.json'
 const toast = useToast()
-let configFilePath = '';
 
-/**
- * @return {Object}
- */
-function get() {
-    getConfigPath()
-    init()
-    const configJson = require(configFilePath)
-    if (!configJson.languageSelected) {
+export function getConfig(): any {
+    let item = ipcRenderer.sendSync('getConfig', null);
+    if (item.error) {
+        toast.error(t(item.msg))
         return {}
     }
-    return configJson
+    return item.result
 }
 
-function open() {
-    get()
-    if (process.platform === 'darwin') {
-        // macOS 上使用默认应用程序打开文件
-        spawn('open', [path.dirname(configFilePath)]);
-        spawn('open', [configFilePath]);
-    } else if (process.platform === 'win32') {
-        // Windows 上使用记事本打开文件
-        spawn('notepad.exe', [path.dirname(configFilePath)]);
-        spawn('explorer', [configFilePath]);
-    } else {
-        // Linux 上使用默认文本编辑器打开文件
-        spawn('xdg-open', [configFilePath]);
-        spawn('xdg-open', [configFilePath]);
+export function openConfig() {
+    let item = ipcRenderer.sendSync('openConfig', null);
+    if (item.error) {
+        toast.error(t(item.msg))
+        return
     }
+    return
 }
 
-function save(data: Object) {
-    try {
-        fs.writeFileSync(configFilePath, JSON.stringify(data), {encoding: 'utf8', flag: 'w'})
-    } catch (e) {
-        toast.error(t('saveConfigError') + e)
+export function saveConfig(value: Object): Object {
+    console.log("saveConfig", value)
+    let item = ipcRenderer.sendSync('saveConfig', JSON.stringify(value, null, 2));
+    if (item.error) {
+        toast.error(t(item.msg))
+        console.log("saveConfig", item.error)
+        return {}
     }
-    toast.success(t('saveConfigSuccess'))
+    return JSON.parse(item.result)
 }
 
-function init() {
-    getConfigPath()
-    if (!fs.existsSync(path.dirname(configFilePath))) {
-        // toast.error(t('configFileNotExist'))
-        try {
-            fs.mkdirSync(path.dirname(configFilePath))
-        } catch (e) {
-            toast.error(t('makeConfigDirError') + e)
-        }
-        toast.success(t('makeConfigDirSuccess'))
-    }
-    if (!fs.existsSync(configFilePath)) {
-        // toast.error(t('configFileNotExist'))
-        try {
-            fs.writeFileSync(configFilePath, fs.readFileSync("/Users/xr/Downloads/config.json"), {
-                encoding: 'utf8',
-                flag: 'w'
-            })
-        } catch (e) {
-            toast.error(t('makeConfigDirError') + e)
-        }
-        toast.success(t('makeConfigDirSuccess'))
-    }
-}
 
-function getConfigPath() {
-    if (homeDir) {
-        configFilePath = path.join(homeDir, `.${appName}`, configFileName)
-    } else {
-        toast.error(t('getUserHomePathError'))
-    }
-}
-
-export default {
-    get,
-    save,
-    open,
-    init,
+export function reload(): any {
+    ipcRenderer.sendSync('saveConfig', null);
 }

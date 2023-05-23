@@ -1,45 +1,14 @@
 import {createApp} from 'vue'
 import App from './App.vue'
 import './samples/node-api'
-import {createRouter, createWebHistory} from "vue-router";
 import Toast, {useToast, type PluginOptions} from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
-import i18n from "./cli/i18n";
+import {t, i18nSetLocale} from './cli/i18n'
+import {router} from "./cli/router";
 
-const {t} = i18n.global
-const routes = [
-    {
-        path: '/',
-        name: t('dashboard'),
-        component: () => import('./components/DashBoard.vue'),
-        Default: true,
-    },
-    {
-        path: '/manage',
-        name: t('manage'),
-        component: () => import('./components/Manage.vue')
+i18nSetLocale("")
 
-    },
-    {
-        path: '/repo',
-        name: t('repo'),
-        component: () => import('./components/Repo.vue')
-    },
-    {
-        path: '/setting',
-        name: t('setting'),
-        component: import('./components/Setting.vue')
-    },
-    {
-        path: '/about',
-        name: t('about'),
-        component: import('./components/About.vue')
-    },
-]
-const router = createRouter({
-    history: createWebHistory(process.env.BASE_URL),
-    routes
-})
+
 const app = createApp(App)
 let count = 0
 const toastOptions: PluginOptions = {
@@ -56,7 +25,6 @@ const toastOptions: PluginOptions = {
 
 }
 
-app.use(i18n)
 app.use(Toast, toastOptions)
 app.use(router)
 app.mount('.app')
