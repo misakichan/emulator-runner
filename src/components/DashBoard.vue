@@ -1,19 +1,27 @@
 <script setup lang="ts">
-import {ref} from 'vue'
-import {t} from '../cli/i18n'
 import path from "path";
+import {t} from '../cli/i18n'
 import {getConfig} from "../cli/config";
-import * as stream from "stream";
 import {useToast} from "vue-toastification";
+import {ref, WatchStopHandle, watch} from 'vue'
 
 const toast = useToast()
 
+let stopWatch: WatchStopHandle
 const config = ref(getConfig())
+const logViewRaw = ref("")
+const logViewName = ref("")
 const {exec} = require('child_process');
 const emulatorLists = ref({} as { [key: string]: any });
 const emulatorPath = path.join(config.value.sdkPath, 'emulator', 'emulator')
 
 defineProps<{ msg: string }>()
+
+function logViewClose() {
+  logViewName.value = '';
+  logViewRaw.value = ''
+  stopWatch()
+}
 
 function emulatorListApp() {
   let logs = ""
@@ -39,8 +47,16 @@ function emulatorListApp() {
 }
 
 function getEmulatorLogs(name: string) {
-  if (!emulatorLists.value[name].logs) emulatorLists.value[name].logs = ""
-  console.log(emulatorLists.value[name].logs)
+  if (logViewName.value !== '' || logViewRaw.value !== '') {
+    logViewClose()
+    return
+  }
+  if (!emulatorLists.value[name].logs) emulatorLists.value[name].logs = t("none")
+  logViewName.value = name
+  logViewRaw.value = emulatorLists.value[name].logs
+  stopWatch = watch(() => emulatorLists.value[name].logs, () => {
+    logViewRaw.value = emulatorLists.value[name].logs
+  });
 }
 
 function getEmulatorRunners() {
@@ -50,7 +66,7 @@ function getEmulatorRunners() {
   let cmd = process.platform === 'win32' ? 'tasklist' : 'ps -exa | grep -v grep | grep emulator | grep qemu'
   exec(cmd, function (err: any, stdout: any, stderr: any) {
     if (stdout === "") {
-      toast.error(t('noRunningEmulator'))
+      toast.info(t('noRunningEmulator'))
       return
     }
     stdout.split('\n').filter((line: any) => {
@@ -61,7 +77,6 @@ function getEmulatorRunners() {
       emulatorLists.value[processMessage[5]].pid = processMessage[0]
     })
   })
-  console.log(emulatorLists.value)
 }
 
 function stopEmulator(name: string) {
@@ -69,17 +84,18 @@ function stopEmulator(name: string) {
     toast.error(t('emulator_not_running'))
     return
   }
-  exec(`kill ${emulatorLists.value[name].pid}`, (err:any, stdout:any, stderr:any) => {
+  exec(`kill ${emulatorLists.value[name].pid}`, (err: any, stdout: any, stderr: any) => {
     if (err) {
       console.error(`停止进程失败: ${err.message}`);
       return;
     }
     console.log(`进程已成功停止: ${emulatorLists.value[name].pid}`);
   });
+  getEmulatorRunners()
 }
 
 function startEmulator(name: string) {
-  emulatorLists.value[name].logs = emulatorLists.value[name].logs.concat("------------------\n")
+  emulatorLists.value[name].logs = emulatorLists.value[name].logs.concat("\n------------------\n")
   // 命令行提示: https://developer.android.com/studio/run/emulator-commandline?hl=zh-cn
   const childProcess = exec(`${emulatorPath} -avd ${name}`, (err: any) => {
     if (err) {
@@ -99,86 +115,14 @@ function startEmulator(name: string) {
     emulatorLists.value[name].logs = logs.concat(data.toString())
   });
   childProcess.on('exit', () => {
-    console.log(emulatorLists.value[name].logs);
+    emulatorLists.value[name].pid = 0
   });
 }
 
 emulatorListApp()
 getEmulatorRunners()
 </script>
-<style>
-.box {
-  width: 330px;
-  height: 210px;
-  margin: 1%;
-  padding: 1%;
-  border: 1px solid #e4eaef;
-  border-radius: 3%;
-  text-align: center;
-  box-shadow: 2px 5px 20px -3px #2c8af82e;
-  background-color: #fff;
-}
 
-.table {
-  border-radius: 10px;
-  padding: 1% 0;
-  text-align: center;
-  height: 82vh;
-  overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 内容居中 */
-.info, .bottom {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-right: 1%;
-}
-
-/* info 和 bottom 布局 */
-.info {
-  width: 75%;
-  height: 100%;
-  float: left;
-  margin-left: 1%;
-  border: 1px solid #e4eaef;
-  border-radius: 5%;
-}
-
-.botton {
-  width: 23%;
-  height: 100%;
-  float: right;
-  align-items: center; /* 将子元素垂直居中对齐 */
-  vertical-align: middle;
-  justify-content: center;
-}
-
-.botton > div {
-  height: 20%;
-  padding: 13.3% 0;
-  margin: 33.3% 0;
-  text-align: center;
-  border: 1px solid #e4eaef;
-  border-radius: 10%;
-}
-
-.botton > div:hover {
-  cursor: pointer; /* 鼠标经过按钮时鼠标指针形状变成手型 */
-  border: #FF6900 1px solid;
-}
-
-.botton > div:active {
-  background: #57befc;
-  color: #fff;
-  border-color: #57befc;
-  box-shadow: 0 2px 5px #57befc80
-}
-
-</style>
 <template>
   <div class="page-container">
     <div class="page">
@@ -195,54 +139,24 @@ getEmulatorRunners()
         <div class="card my-2.5 p-0 md:my-4">
           <div style="clear: both;"></div>
           <ul class="table">
-            <li class="box" v-for="key in Object.keys(emulatorLists)" :key="key" :value="emulatorLists[key]">
+            <li class="box" v-for="key in Object.keys(emulatorLists)" :key="key">
               <div class="info">
                 {{ key }}
               </div>
-              <div class="botton">
+              <div class="button">
                 <div @click="getEmulatorLogs(key)">日志</div>
-                <div @click="startEmulator(key)">启动</div>
-                <div @click="stopEmulator(key)">配置</div>
+                <div class="running" v-show="emulatorLists[key].pid!=0" @click="stopEmulator(key)">停止</div>
+                <div class="stopped" v-show="emulatorLists[key].pid==0" @click="startEmulator(key)">启动</div>
+                <div @click="">配置</div>
               </div>
             </li>
-            <!--              <div class="proxy-group">-->
-            <!--                <div class="md:h-15 mt-4 flex h-10 w-full items-center justify-between md:mt-0 md:w-auto">-->
-            <!--                  <span-->
-            <!--                      class="w-35 md:w-30 h-6 overflow-hidden overflow-ellipsis whitespace-nowrap px-5">开发</span><span-->
-            <!--                    class="tag mr-5 md:mr-0">Selector</span></div>-->
-            <!--                <div class="flex-1 py-2 md:py-4">-->
-            <!--                  <div class="flex items-start overflow-y-hidden ml-5 md:ml-8"-->
-            <!--                       style="height: 30px;">-->
-            <!--                    <ul class="tags">-->
-            <!--                      &lt;!&ndash;                                                <li class="tags-selected cursor-pointer">🎯 全球直连</li>&ndash;&gt;-->
-            <!--                      <li class="cursor-pointer">开发1</li>-->
-            <!--                      <li class="cursor-pointer error">开发2</li>-->
-            <!--                      <li class="cursor-pointer">开发3</li>-->
-            <!--                    </ul>-->
-            <!--                    <span class="h-7 cursor-pointer select-none px-5 leading-7">展开</span>-->
-            <!--                  </div>-->
-            <!--                </div>-->
-            <!--              </div>-->
-            <!--            <li>-->
-            <!--              <div class="proxy-group">-->
-            <!--                <div class="md:h-15 mt-4 flex h-10 w-full items-center justify-between md:mt-0 md:w-auto">-->
-            <!--                  <span-->
-            <!--                      class="w-35 md:w-30 h-6 overflow-hidden overflow-ellipsis whitespace-nowrap px-5">测试</span><span-->
-            <!--                    class="tag mr-5 md:mr-0">Selector</span></div>-->
-            <!--                <div class="flex-1 py-2 md:py-4">-->
-            <!--                  <div class="flex items-start overflow-y-hidden ml-5 md:ml-8"-->
-            <!--                       style="height: 30px;">-->
-            <!--                    <ul class="tags">-->
-            <!--                      <li class="tags-selected cursor-pointer">测试1</li>-->
-            <!--                      <li class="cursor-pointer error">测试2</li>-->
-            <!--                      <li class="tags-selected cursor-pointer">测试3</li>-->
-            <!--                    </ul>-->
-            <!--                    <span class="h-7 cursor-pointer select-none px-5 leading-7">展开</span>-->
-            <!--                  </div>-->
-            <!--                </div>-->
-            <!--              </div>-->
-            <!--            </li>-->
           </ul>
+          <div class="drawer" v-show="logViewName">
+            <button @click="logViewClose" class="close-button">x</button>
+            <h5>{{ logViewName }}</h5>
+            <hr style="background: #FF6900;height: 1px;width: 94%;margin: 0 2%">
+            <div>{{ logViewRaw }}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -258,6 +172,16 @@ getEmulatorRunners()
   align-items: center;
   justify-content: space-between;
   user-select: none;
+}
+
+.running {
+  background: #FF6900;
+  color: #fff;
+}
+
+.stopped {
+  background: #57befc;
+  color: #fff;
 }
 
 .header > h1 {
@@ -276,15 +200,6 @@ getEmulatorRunners()
   box-shadow: 2px 5px 20px -3px #2c8af82e;
 }
 
-.tags {
-  display: flex;
-  box-sizing: content-box;
-  list-style: none;
-  flex: 1;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
 .tags li {
   position: relative;
   display: flex;
@@ -297,24 +212,6 @@ getEmulatorRunners()
   font-size: 10px;
   align-items: center;
   justify-content: center;
-}
-
-.tags li.error {
-  border-color: #f56c6c;
-  background-color: #f56c6c;
-  color: #fff;
-}
-
-.tags li.tags-selected.error {
-  padding: 0 7px;
-  height: 24px;
-  border: none;
-  background: linear-gradient(135deg, #2c8af8, #f56c6c);
-}
-
-.tags .tags-selected {
-  background-color: #2c8af8;
-  color: #fff;
 }
 
 .checkbox {
@@ -354,20 +251,6 @@ getEmulatorRunners()
   color: #fff;
 }
 
-.tag {
-  display: flex;
-  padding: 0 12px;
-  height: 24px;
-  border: 2px solid #2c8af8;
-  border-radius: 12px;
-  background-color: #fff;
-  color: #2c8af8;
-  text-align: center;
-  font-size: 12px;
-  align-items: center;
-  justify-content: center;
-}
-
 @keyframes spinner {
   0% {
     transform: rotate(0);
@@ -378,11 +261,129 @@ getEmulatorRunners()
   }
 }
 
-.proxy-group {
+.flex > .card {
   display: flex;
-  color: #546b87;
+}
+
+.table {
+  flex: 1;
+  padding: 1% 0;
+  height: 82vh;
+  border-radius: 10px;
+  display: flex;
+  overflow-y: auto;
+  flex-wrap: wrap;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  text-align: center;
+  align-items: center;
+  align-content: flex-start;
+  justify-content: center;
+}
+
+.box {
+  width: 330px;
+  height: 210px;
+  margin: 1%;
+  padding: 1%;
+  border: 1px solid #e4eaef;
+  border-radius: 3%;
+  text-align: center;
+  box-shadow: 2px 5px 20px -3px #2c8af82e;
+  background-color: #fff;
+}
+
+.info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 1%;
+}
+
+.info {
+  width: 75%;
+  height: 100%;
+  float: left;
+  margin-left: 1%;
+  border: 1px solid #e4eaef;
+  border-radius: 5%;
+}
+
+.button {
+  width: 23%;
+  height: 100%;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.button > div {
+  height: 22.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 22.5% 0; /* TODO 这里数据有一点偏差 */
+  text-align: center;
+  border: 1px solid #e4eaef;
+  border-radius: 10%;
+}
+
+.button > div:hover {
+  cursor: pointer; /* 鼠标经过按钮时鼠标指针形状变成手型 */
+  border: #FF6900 1px solid;
+}
+
+.item > a:hover {
+  cursor: pointer; /* 鼠标经过按钮时鼠标指针形状变成手型 */
+  border: #e4eaef 1px solid;
+}
+
+.button > div:active {
+  background: #57befc;
+  color: #fff;
+  border-color: #57befc;
+  box-shadow: 0 2px 5px #57befc80
+}
+
+.drawer {
+  width: 45%;
+  display: block;
+  background: #e4eaef;
+  border-radius: 10px;
+  padding: 1% 0;
+  height: 82vh;
+  margin: 0.5%;
+  position: relative;
+  overflow-y: auto;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  white-space: pre-wrap;
+  align-content: flex-start;
+}
+
+.drawer > div {
+  text-align: left;
+  padding: 1% 1% 1% 2%;
+  white-space: pre-wrap;
+  word-wrap: break-word; /* 或者使用 overflow-wrap: break-word; */
+}
+
+.close-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  color: transparent;
+  background-color: red;
+  border: none;
+  border-radius: 50%;
   font-size: 14px;
-  align-items: flex-start;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.close-button:hover {
+  color: black;
 }
 
 @media (max-width: 768px) {
@@ -462,13 +463,6 @@ ul {
   flex-direction: column;
 }
 
-.items-start {
-  -webkit-box-align: start;
-  -ms-flex-align: start;
-  -webkit-align-items: flex-start;
-  align-items: flex-start;
-}
-
 .items-center {
   -webkit-box-align: center;
   -ms-flex-align: center;
@@ -483,13 +477,6 @@ ul {
   justify-content: flex-end;
 }
 
-.justify-between {
-  -webkit-box-pack: justify;
-  -ms-flex-pack: justify;
-  -webkit-justify-content: space-between;
-  justify-content: space-between;
-}
-
 .flex-auto {
   -webkit-box-flex: 1;
   -ms-flex: 1 1 auto;
@@ -497,70 +484,13 @@ ul {
   flex: 1 1 auto;
 }
 
-.flex-1 {
-  -webkit-box-flex: 1;
-  -ms-flex: 110%;
-  -webkit-flex: 110%;
-  flex: 110%;
-}
-
-.h-7 {
-  height: 1.75rem;
-}
-
-.h-10 {
-  height: 2.5rem;
-}
-
-.h-6 {
-  height: 1.5rem;
-}
-
 .text-sm {
   font-size: .875rem;
   line-height: 1.25rem;
 }
 
-.leading-7 {
-  line-height: 1.75rem;
-}
-
-.list-none {
-  list-style-type: none;
-}
-
-.mt-4 {
-  margin-top: 1rem;
-}
-
-.mr-5 {
-  margin-right: 1.25rem;
-}
-
-.ml-5 {
-  margin-left: 1.25rem;
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.overflow-y-hidden {
-  overflow-y: hidden;
-}
-
 .p-0 {
   padding: 0;
-}
-
-.px-5 {
-  padding-right: 1.25rem;
-  padding-left: 1.25rem;
-}
-
-.py-2 {
-  padding-top: .5rem;
-  padding-bottom: .5rem;
 }
 
 .text-primary-600 {
@@ -568,31 +498,7 @@ ul {
   --tw-text-opacity: 1;
 }
 
-.overflow-ellipsis {
-  text-overflow: ellipsis;
-  -o-text-overflow: ellipsis;
-}
-
 .text-shadow-primary {
   text-shadow: 0 0 6px rgb(44 138 248 / 40%);
-}
-
-.select-none {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-.whitespace-nowrap {
-  white-space: nowrap;
-}
-
-.w-full {
-  width: 100%;
-}
-
-.w-35 {
-  width: 8.75rem;
 }
 </style>
