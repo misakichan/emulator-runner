@@ -1,14 +1,13 @@
 import {getCurrentInstance} from "vue";
 
-const t = function (value: string) {
-    return value
-}
+import {t} from "./i18n";
+
 export default {
     proxySelectedOption: [
         {key: 'none', text: t("none"), value: ""},
-        {key: 'Clash', text: "Clash", value: "http://127.0.0.1:7890"},
-        {key: 'ShadowSocksR', text: "ShadowSocksR", value: "http://127.0.0.1:1080"},
-        {key: 'V2RAY', text: "V2RAY", value: "http://127.0.0.1:10809"},
+        {key: 'clash', text: "Clash", value: "http://127.0.0.1:7890"},
+        {key: 'ssr', text: "Shadowsocks", value: "http://127.0.0.1:1080"},
+        {key: 'v2ray', text: "V2Ray", value: "http://127.0.0.1:10809"},
         {key: 'custom', text: t("custom"), value: "http://127.0.0.1:10809"}
     ],
     githubSelectedOption: [

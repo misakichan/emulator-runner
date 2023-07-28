@@ -1,16 +1,28 @@
 <script setup lang="ts">
 
-import {ipcRenderer} from "electron";
-import {t} from "../cli/i18n";
+import {getConfig} from "../cli/config";
+import {ref} from "vue";
+import path from "path";
+
+const {exec} = require('child_process');
+
+const config = ref(getConfig())
+const emulatorsLog = ref({} as { [key: string]: any });
+
 
 function test1() {
-  console.log(t('dashboard'));
+
 }
 
 </script>
 
 <template>
-  <bottom @click="test1"></bottom>
+  <br>
+  <br>
+  <br>
+  <br>
+  <br>
+  <bottom @click="test1">你好</bottom>
 </template>
 
 <style scoped>

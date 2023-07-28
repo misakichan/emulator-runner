@@ -60,7 +60,21 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
     process.exit(0)
 }
-let configFilePath = `${os.homedir()}/.${app.getName().toLowerCase().replace(/\s+/g, '-')}/config.json`
+let configFilePath = path.join(os.homedir(), `.${app.getName().toLowerCase().replace(/\s+/g, '-')}`, 'config.json')
+let sdkPath: string;
+switch (process.platform) {
+    case 'darwin':
+        sdkPath = path.join(os.homedir(), 'Library', 'Android', 'sdk');
+        break;
+    case 'win32':
+        sdkPath = path.join(os.homedir(), 'AppData', 'Local', 'Android', 'sdk');
+        break;
+    case 'linux':
+        sdkPath = path.join(os.homedir(), 'Android', 'sdk');
+        break;
+    default:
+        console.log('Unknown platform ' + process.platform);
+}
 
 // ----------------------------------------------------------------------
 
@@ -298,7 +312,9 @@ function getConfigHandle(): { error: Error, msg: string, result: any } {
     }
     let configJson: any
     try {
-        configJson = JSON.parse(fs.readFileSync(configFilePath).toString())
+        configJson = JSON.parse(fs.readFileSync(configFilePath).toString());
+        configJson.configFilePath = configFilePath;
+        configJson.sdkPath = sdkPath;
     } catch (e) {
         return {error: e, msg: i18n.__('readConfigError'), result: {}};
     }

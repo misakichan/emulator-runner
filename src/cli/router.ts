@@ -1,5 +1,5 @@
 import {t} from "./i18n";
-import {createRouter, createWebHistory} from "vue-router";
+import {createRouter, createWebHashHistory} from "vue-router";
 
 import dashboard from "../components/DashBoard.vue";
 import manage from "../components/Manage.vue";
@@ -18,7 +18,6 @@ const routes = [
         path: '/manage',
         name: t('manage'),
         component: manage
-
     },
     {
         path: '/repo',
@@ -38,7 +37,7 @@ const routes = [
 ]
 
 export const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHashHistory(),
     routes
 })
 

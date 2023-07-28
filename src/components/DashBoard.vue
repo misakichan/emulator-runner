@@ -1,34 +1,119 @@
 <script setup lang="ts">
 import {ref} from 'vue'
 import {t} from '../cli/i18n'
+import path from "path";
+import {getConfig} from "../cli/config";
+import * as stream from "stream";
+import {useToast} from "vue-toastification";
+
+const toast = useToast()
+
+const config = ref(getConfig())
+const {exec} = require('child_process');
+const emulatorLists = ref({} as { [key: string]: any });
+const emulatorPath = path.join(config.value.sdkPath, 'emulator', 'emulator')
 
 defineProps<{ msg: string }>()
 
-function emulatorList() {
-
+function emulatorListApp() {
+  let logs = ""
+  const childProcess = exec(`${emulatorPath} -list-avds`)
+  childProcess.stdout.on('data', (data: any) => {
+    logs = logs.concat(data.toString());
+  });
+  childProcess.on('exit', () => {
+    logs.split('\n').filter((line: any) => {
+      // let name = line.trim().split(/\n/)
+      if (line === "") {
+        return
+      }
+      if (emulatorLists.value[line] === undefined) {
+        emulatorLists.value[line] = {pid: 0, logs: ''}
+      }
+    })
+    if (Object.keys(emulatorLists.value).length === 0) {
+      toast.info(t('noEmulator'))
+      return
+    }
+  });
 }
 
-const emulatorLists = ref([
-  {key: '开发', value: '开发',},
-  {key: '测试', value: '测试',},
-  {key: '生产', value: '生产',},
-  {key: '生产', value: '生产',},
-  {key: '生产', value: '生产',},
-  {key: '生产', value: '生产',},
-  {key: '生产', value: '生产',},
-  {key: '生产', value: '生产',},
-])
+function getEmulatorLogs(name: string) {
+  if (!emulatorLists.value[name].logs) emulatorLists.value[name].logs = ""
+  console.log(emulatorLists.value[name].logs)
+}
 
+function getEmulatorRunners() {
+  // 带有命令行的list进程命令是：“cmd.exe /c wmic process list full”
+  //  tasklist 是没有带命令行参数的。可以把这两个命令再cmd里面执行一下看一下效果
+  // 注意：命令行获取的都带有换行符，获取之后需要更换换行符。可以执行配合这个使用 str.replace(/[\r\n]/g,""); 去除回车换行符
+  let cmd = process.platform === 'win32' ? 'tasklist' : 'ps -exa | grep -v grep | grep emulator | grep qemu'
+  exec(cmd, function (err: any, stdout: any, stderr: any) {
+    if (stdout === "") {
+      toast.error(t('noRunningEmulator'))
+      return
+    }
+    stdout.split('\n').filter((line: any) => {
+      let processMessage = line.trim().split(/\s+/)
+      if (processMessage.length < 5) {
+        return
+      }
+      emulatorLists.value[processMessage[5]].pid = processMessage[0]
+    })
+  })
+  console.log(emulatorLists.value)
+}
+
+function stopEmulator(name: string) {
+  if (emulatorLists.value[name].pid === 0) {
+    toast.error(t('emulator_not_running'))
+    return
+  }
+  exec(`kill ${emulatorLists.value[name].pid}`, (err:any, stdout:any, stderr:any) => {
+    if (err) {
+      console.error(`停止进程失败: ${err.message}`);
+      return;
+    }
+    console.log(`进程已成功停止: ${emulatorLists.value[name].pid}`);
+  });
+}
+
+function startEmulator(name: string) {
+  emulatorLists.value[name].logs = emulatorLists.value[name].logs.concat("------------------\n")
+  // 命令行提示: https://developer.android.com/studio/run/emulator-commandline?hl=zh-cn
+  const childProcess = exec(`${emulatorPath} -avd ${name}`, (err: any) => {
+    if (err) {
+      emulatorLists.value[name].logs = emulatorLists.value[name].logs.concat(err.message)
+      if (err.message.includes('same AVD')) {
+        toast.error(t('emulatorAlreadyRunning'))
+        return
+      }
+      toast.error(`${t('emulatorStartFailed')}: ${err}`)
+      return;
+    }
+  });
+  emulatorLists.value[name].pid = childProcess.pid
+
+  childProcess.stdout.on('data', (data: any) => {
+    const logs = emulatorLists.value[name].logs || '';
+    emulatorLists.value[name].logs = logs.concat(data.toString())
+  });
+  childProcess.on('exit', () => {
+    console.log(emulatorLists.value[name].logs);
+  });
+}
+
+emulatorListApp()
+getEmulatorRunners()
 </script>
 <style>
 .box {
   width: 330px;
-  height: 250px;
+  height: 210px;
   margin: 1%;
   padding: 1%;
   border: 1px solid #e4eaef;
   border-radius: 3%;
-  display: inline-block;
   text-align: center;
   box-shadow: 2px 5px 20px -3px #2c8af82e;
   background-color: #fff;
@@ -37,8 +122,12 @@ const emulatorLists = ref([
 .table {
   border-radius: 10px;
   padding: 1% 0;
-  display: inline-block;
   text-align: center;
+  height: 82vh;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 内容居中 */
@@ -81,6 +170,7 @@ const emulatorLists = ref([
   cursor: pointer; /* 鼠标经过按钮时鼠标指针形状变成手型 */
   border: #FF6900 1px solid;
 }
+
 .botton > div:active {
   background: #57befc;
   color: #fff;
@@ -105,17 +195,14 @@ const emulatorLists = ref([
         <div class="card my-2.5 p-0 md:my-4">
           <div style="clear: both;"></div>
           <ul class="table">
-            <li class="box" v-for="item in emulatorLists"
-                :key="item.key"
-                :value="item.value"
-            >
+            <li class="box" v-for="key in Object.keys(emulatorLists)" :key="key" :value="emulatorLists[key]">
               <div class="info">
-                {{ item.value ?? item.key }}
+                {{ key }}
               </div>
               <div class="botton">
-                <div>日志</div>
-                <div>启动</div>
-                <div>重启</div>
+                <div @click="getEmulatorLogs(key)">日志</div>
+                <div @click="startEmulator(key)">启动</div>
+                <div @click="stopEmulator(key)">配置</div>
               </div>
             </li>
             <!--              <div class="proxy-group">-->

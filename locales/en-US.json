@@ -24,8 +24,8 @@
   "openConfigError": "Failed To Open Config File",
   "openConfigSuccess": "Success To Open Config File",
   "proxy": "Proxy",
-  "readConfigError": "读取配置文件成功",
-  "readConfigSuccess": "读取配置文件成功",
+  "readConfigError": "Failed To Read Config File",
+  "readConfigSuccess": "Success To Read Config File",
   "repo": "Repo Manage",
   "rpcError": "RPC Error",
   "saveConfigError": "Failed To Save Config File",
@@ -33,5 +33,10 @@
   "setting": "Setting",
   "touchConfigError": "Failed To Touch Config File",
   "touchConfigSuccess": "Success To Touch Config File",
-  "virtualMachine": "Virtual Machine"
+  "virtualMachine": "Virtual Machine",
+  "noRunningEmulator": "No Running Emulator",
+  "noEmulator": "No Emulator, Create One!",
+  "emulatorAlreadyRunning": "Emulator Already Running",
+  "emulatorStartFailed": "Emulator Start Failed",
+  "emulatorNotRunning": "Emulator Not Running"
 }
