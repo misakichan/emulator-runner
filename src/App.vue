@@ -1,9 +1,13 @@
 <script setup lang="ts">
 // const { ipcRenderer } = require('electron');
 import {t} from "./cli/i18n";
+// import { useRouter } from 'vue-router'
+
+// const router = useRouter()
+import {router} from "./cli/router";
 
 function currentRoute() {
-  return window.location.pathname
+  return router.currentRoute.value.path
 }
 
 const menuItems = [
@@ -21,7 +25,7 @@ const menuItems = [
     <img src="./static/icon.png" alt="logo" class="sidebar-logo">
     <ul class="sidebar-menu">
       <li v-for="item in menuItems" class="item">
-        <a :class="{ 'active': item.path === currentRoute() }" :href="item.path">
+        <a :class="{ 'active': item.path === currentRoute() }" @click="router.push(item.path)">
           {{ item.text }}
         </a>
       </li>
@@ -31,7 +35,7 @@ const menuItems = [
       <span class="sidebar-version-text">v0.0.1</span>
     </div>
   </div>
-  <router-view/>
+  <router-view></router-view>
 </template>
 
 <style scoped>
