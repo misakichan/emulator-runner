@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>runemu</string>
+    <key>CFBundleIconFile</key>
+    <string>ApplicationStub.icns</string>
+    <key>CFBundleGetInfoString</key>
+    <string>Author: XRSec | Website: github.com/Ran-Xing/emulator-runner</string>
+</dict>
+</plist>
