@@ -30,4 +30,4 @@ app.use(router)
 app.mount('.app')
     .$nextTick(() => {
         postMessage({payload: 'removeLoading'}, '*')
-    })
+    }).then(r => r)

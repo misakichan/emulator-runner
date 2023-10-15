@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@types/i18n": "^0.13.6",
+    "@types/node": "^20.8.6",
     "@types/vue-router": "^2.0.0",
     "@vitejs/plugin-vue": "^4.1.0",
     "electron": "^25.3.2",

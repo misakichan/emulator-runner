@@ -1,6 +1,7 @@
 import {ipcRenderer} from 'electron';
 import {useToast} from "vue-toastification";
 import {t} from './i18n'
+import {it} from "node:test";
 
 const toast = useToast()
 
@@ -8,7 +9,6 @@ export function getConfig(): any {
     let item = ipcRenderer.sendSync('getConfig', null);
     if (item.error) {
         toast.error(t(item.msg))
-        return {}
     }
     return item.result
 }

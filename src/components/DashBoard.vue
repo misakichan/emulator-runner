@@ -4,6 +4,8 @@ import {t} from '../cli/i18n'
 import {getConfig} from "../cli/config";
 import {useToast} from "vue-toastification";
 import {ref, WatchStopHandle, watch} from 'vue'
+import * as fs from "fs";
+import {exec} from "child_process";
 
 const toast = useToast()
 
@@ -11,9 +13,8 @@ let stopWatch: WatchStopHandle
 const config = ref(getConfig())
 const logViewRaw = ref("")
 const logViewName = ref("")
-const {exec} = require('child_process');
 const emulatorLists = ref({} as { [key: string]: any });
-const emulatorPath = path.join(config.value.sdkPath, 'emulator', 'emulator')
+const emulatorPath = path.join(config.value.sdkPath, 'emulator/emulator')
 
 defineProps<{ msg: string }>()
 
@@ -25,8 +26,8 @@ function logViewClose() {
 
 function emulatorListApp() {
   let logs = ""
-  const childProcess = exec(`${emulatorPath} -list-avds`)
-  childProcess.stdout.on('data', (data: any) => {
+  const childProcess = exec(`find /Applications -name "*.avd" -type d -mindepth 5 -maxdepth 8`)
+  childProcess.stdout?.on('data', (data: any) => {
     logs = logs.concat(data.toString());
   });
   childProcess.on('exit', () => {
@@ -35,10 +36,38 @@ function emulatorListApp() {
       if (line === "") {
         return
       }
-      if (emulatorLists.value[line] === undefined) {
-        emulatorLists.value[line] = {pid: 0, logs: ''}
+      // EXAMPLE /Applications/金铲铲之战.app/Contents/MacOS/avd/Android5_1610.avd
+      let avdID = line.split('/').pop().replace('.avd', '')
+      let display_name = avdID
+      line.split('/').filter((item: any) => {
+        if (item === "") {
+          return
+        }
+        if (item.includes('.app')) {
+          display_name = item.replace('.app', '')
+          return
+        }
+      })
+      let avdIcon = path.join(line, '../../../Resources/ApplicationStub.png')
+      try {
+        fs.accessSync(avdIcon, fs.constants.F_OK);
+        avdIcon = "file://" + avdIcon
+      } catch (err) {
+        avdIcon = "/src/static/icon.png";
+      }
+
+      if (emulatorLists.value[avdID] === undefined) {
+        emulatorLists.value[avdID] = {
+          avd: avdID,
+          name: display_name,
+          icon: avdIcon,
+          config: path.join(line, 'config.ini'),
+          pid: 0,
+          logs: ''
+        }
       }
     })
+    console.debug(emulatorLists.value)
     if (Object.keys(emulatorLists.value).length === 0) {
       toast.info(t('noEmulator'))
       return
@@ -110,7 +139,7 @@ function startEmulator(name: string) {
   });
   emulatorLists.value[name].pid = childProcess.pid
 
-  childProcess.stdout.on('data', (data: any) => {
+  childProcess.stdout?.on('data', (data: any) => {
     const logs = emulatorLists.value[name].logs || '';
     emulatorLists.value[name].logs = logs.concat(data.toString())
   });
@@ -141,7 +170,8 @@ getEmulatorRunners()
           <ul class="table">
             <li class="box" v-for="key in Object.keys(emulatorLists)" :key="key">
               <div class="info">
-                {{ key }}
+                <img :src=emulatorLists[key].icon alt="Icon">
+                <h5 style="width: 80%">{{ emulatorLists[key].name }}</h5>
               </div>
               <div class="button">
                 <div @click="getEmulatorLogs(key)">日志</div>
@@ -268,7 +298,7 @@ getEmulatorRunners()
 .table {
   flex: 1;
   padding: 1% 0;
-  height: 82vh;
+  height: 87vh;
   border-radius: 10px;
   display: flex;
   overflow-y: auto;
@@ -282,8 +312,8 @@ getEmulatorRunners()
 }
 
 .box {
-  width: 330px;
-  height: 210px;
+  width: 280px;
+  height: 230px;
   margin: 1%;
   padding: 1%;
   border: 1px solid #e4eaef;
@@ -297,16 +327,27 @@ getEmulatorRunners()
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 1%;
-}
-
-.info {
-  width: 75%;
+  flex-direction: column;
+  margin-right: 7%;
+  width: 70%;
   height: 100%;
   float: left;
-  margin-left: 1%;
   border: 1px solid #e4eaef;
   border-radius: 5%;
+}
+
+.info > img {
+  width: 90%;
+}
+
+.info > h5 {
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.5rem;
+  color: #e87109;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .button {
@@ -317,11 +358,11 @@ getEmulatorRunners()
 }
 
 .button > div {
-  height: 22.5%;
+  height: 18%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 22.5% 0; /* TODO 这里数据有一点偏差 */
+  margin: 42% 0; /* TODO 这里数据有一点偏差 */
   text-align: center;
   border: 1px solid #e4eaef;
   border-radius: 10%;
@@ -402,7 +443,7 @@ getEmulatorRunners()
 .page {
   display: flex;
   margin: 0 auto;
-  padding: 20px 35px 30px 20px;
+  padding: 20px 35px 0px 20px;
   width: 100%;
   min-height: 100vh;
   flex-direction: column;

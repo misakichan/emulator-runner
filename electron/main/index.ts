@@ -17,6 +17,7 @@ import i18n from "i18n";
 import os from "os";
 import {spawn} from "child_process";
 import * as fs from "fs";
+import {string} from "yaml/dist/schema/common/string";
 
 // The built directory structure
 //
@@ -60,7 +61,13 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
     process.exit(0)
 }
-let configFilePath = path.join(os.homedir(), `.${app.getName().toLowerCase().replace(/\s+/g, '-')}`, 'config.json')
+let configFilePath = path.join(app.getAppPath(), 'config.json')
+let staticPath = path.join(app.getAppPath(), '/src/static')
+let tmp_path = app.getAppPath()
+if (tmp_path.includes('/Contents/Resources/')) {
+    configFilePath = path.join(app.getAppPath(), '../../config.json')
+    staticPath = path.join(app.getAppPath(), '../../Resources/')
+}
 let sdkPath: string;
 switch (process.platform) {
     case 'darwin':
@@ -75,7 +82,8 @@ switch (process.platform) {
     default:
         console.log('Unknown platform ' + process.platform);
 }
-
+console.log(app.getAppPath())
+const configDateDefault = {"configFilePath": configFilePath, "sdkPath": sdkPath, "languageSelected": "auto", "staticPath": staticPath}
 // ----------------------------------------------------------------------
 
 // Remove electron security warnings
@@ -130,7 +138,7 @@ async function createWindow() {
             // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
             nodeIntegration: true,
             contextIsolation: false,
-            webSecurity: true,
+            webSecurity: false,
             // 如果是开发模式可以使用devTools 调试
             // devTools: process.env.NODE_ENV === "development",
             devTools: true,
@@ -308,42 +316,44 @@ function getConfigHandle(): { error: Error, msg: string, result: any } {
     let item = initConfigHandle()
     if (item.error) {
         console.log("getConfigHandle error", item.error)
-        return Object.assign({}, item, {result: {}})
+        return {error: item.error, msg: item.msg, result: configDateDefault}
     }
     let configJson: any
     try {
         configJson = JSON.parse(fs.readFileSync(configFilePath).toString());
         configJson.configFilePath = configFilePath;
         configJson.sdkPath = sdkPath;
+        configJson.staticPath = staticPath;
     } catch (e) {
-        return {error: e, msg: i18n.__('readConfigError'), result: {}};
+        return {
+            error: e,
+            msg: i18n.__('readConfigError'),
+            result: configDateDefault
+        };
     }
-    if (!configJson.languageSelected) return {error: new Error("configError"), msg: i18n.__('configError'), result: {}};
+    if (!configJson.languageSelected) return {
+        error: new Error("configError"),
+        msg: i18n.__('configError'),
+        result: configDateDefault
+    };
 
     return {error: null, msg: i18n.__('getConfigSuccess'), result: configJson}
 }
 
 function initConfigHandle(): { error: Error, msg: string } {
-    if (!fs.existsSync(path.dirname(configFilePath))) {
-        console.log("initConfigHandle dir")
-        try {
-            fs.mkdirSync(path.dirname(configFilePath))
-        } catch (e) {
-            return {error: e, msg: i18n.__('makeConfigDirError')}
-        }
-    }
     if (!fs.existsSync(configFilePath)) {
         console.log("initConfigHandle file")
         try {
-            fs.writeFileSync(configFilePath, fs.readFileSync("/Users/xr/Downloads/config.json"), {
+            fs.writeFileSync(configFilePath, `${configDateDefault}`, {
                 encoding: 'utf8',
                 flag: 'w'
             })
+            return {error: null, msg: i18n.__('touchConfigSuccess')}
         } catch (e) {
             return {error: e, msg: i18n.__('touchConfigError')}
         }
     }
-    return {error: null, msg: ''}
+    return {error: null, msg: i18n.__('initConfigSuccess')}
 }
 
 // ----------------------------------------------------------------------
