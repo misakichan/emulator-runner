@@ -55,20 +55,20 @@ if [ ! -d "${ANDROID_SDK_ROOT}/platform-tools" ]; then
     unzip -q "tmp/platform-tools.zip" -d "${ANDROID_SDK_ROOT}"
 fi
 
-if [ ! -d "${ANDROID_SDK_ROOT}/skins" ]; then
-    cp -r "${ANDROID_HOME}/skins" "${ANDROID_SDK_ROOT}/" # TODO
-else
-    if [ ! -d "${ANDROID_SDK_ROOT}/skins/pixel_7_pro" ]; then
-        cp -r "${ANDROID_HOME}/skins/pixel_7_pro" "${ANDROID_SDK_ROOT}/skins/" # TODO
-    fi
-fi
+#if [ ! -d "${ANDROID_SDK_ROOT}/skins" ]; then
+#    cp -r "${ANDROID_HOME}/skins" "${ANDROID_SDK_ROOT}/" # TODO
+#else
+#    if [ ! -d "${ANDROID_SDK_ROOT}/skins/pixel_4_xl" ]; then
+#        cp -r "${ANDROID_HOME}/skins/pixel_4_xl" "${ANDROID_SDK_ROOT}/skins/" # TODO
+#    fi
+#fi
 if [ ! -d "${ANDROID_SDK_ROOT}/platforms" ]; then
     mkdir "${ANDROID_SDK_ROOT}/platforms"
 fi
 
 system_images=system_images
-system_images_url="system_images_url"
-system_images_path="system_images_path"
+system_images_url=system_images_url
+system_images_path=system_images_path
 if [ ! -d "${ANDROID_SDK_ROOT}/${system_images_path}" ]; then
     if [ ! -e "tmp/${system_images}.zip" ]; then
         curl -s "${system_images_url}" -o "tmp/${system_images}.zip"
@@ -76,11 +76,14 @@ if [ ! -d "${ANDROID_SDK_ROOT}/${system_images_path}" ]; then
     mkdir -p "${ANDROID_SDK_ROOT}/${system_images_path}"
     unzip -q "tmp/${system_images}.zip" -d "${ANDROID_SDK_ROOT}/${system_images_path}"
 fi
+if [ -d "tmp" ]; then rm -rf tmp; fi
 msg_ok 初始化完成!
 
 "${ANDROID_EMULATOR_LAUNCHER_DIR}/emulator" \
     -dns-server 8.8.8.8,114.114.114.114 \
-    -avd "Android" \
+    -avd Android \
     -no-snapshot \
     -no-boot-anim \
-    -no-snapstorage
+    -no-snapstorage \
+    -netdelay none \
+    -netspeed full
