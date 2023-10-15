@@ -8,7 +8,7 @@ const toast = useToast()
 export function getConfig(): any {
     let item = ipcRenderer.sendSync('getConfig', null);
     if (item.error) {
-        toast.error(t(item.msg))
+        toast.error(item.msg)
     }
     return item.result
 }
@@ -16,7 +16,7 @@ export function getConfig(): any {
 export function openConfig() {
     let item = ipcRenderer.sendSync('openConfig', null);
     if (item.error) {
-        toast.error(t(item.msg))
+        toast.error(item.msg)
         return
     }
     return
@@ -26,7 +26,7 @@ export function saveConfig(value: Object): Object {
     console.log("saveConfig", value)
     let item = ipcRenderer.sendSync('saveConfig', JSON.stringify(value, null, 2));
     if (item.error) {
-        toast.error(t(item.msg))
+        toast.error(item.msg)
         console.log("saveConfig", item.error)
         return {}
     }

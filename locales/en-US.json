@@ -39,7 +39,5 @@
 	"noEmulator": "No Emulator, Create One!",
 	"emulatorAlreadyRunning": "Emulator Already Running",
 	"emulatorStartFailed": "Emulator Start Failed",
-	"emulatorNotRunning": "Emulator Not Running",
-	"Failed To Touch Config File": "Failed To Touch Config File",
-	"Config Error": "Config Error"
+	"emulatorNotRunning": "Emulator Not Running"
 }

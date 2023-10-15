@@ -45,7 +45,7 @@ if (!gotTheLock) {
 // 多语言化
 i18n.configure({
     locales: ["zh-CN", "en-US"],
-    directory: path.join(app.getAppPath(), "locales"),
+    directory: path.join(app.getAppPath(), "locales"), // TODO 这里有文件位置
     defaultLocale: 'en-US',
     register: global,
 });
@@ -344,7 +344,7 @@ function initConfigHandle(): { error: Error, msg: string } {
     if (!fs.existsSync(configFilePath)) {
         console.log("initConfigHandle file")
         try {
-            fs.writeFileSync(configFilePath, `${configDateDefault}`, {
+            fs.writeFileSync(configFilePath, JSON.stringify(configDateDefault), {
                 encoding: 'utf8',
                 flag: 'w'
             })
