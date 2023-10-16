@@ -50,7 +50,7 @@ jobs:
         id: next-version
         uses: HardNorth/github-version-generate@v1.3.0
         with:
-          version: ${{ steps.sanitized-prefix.outputs.SANITIZED_PREFIX }}
+          version: ${{ steps.current-version.outputs.tag_name }}
           next-version-increment-patch: true
       -
         name: Delete old Releases
