@@ -52,16 +52,20 @@ makeIcns() {
     rm -rf icons.iconset
 }
 
+repo=https://dl.google.com/android/repository/
+
+
 msg_info 正在初始化资源文件
 echo
 find "${PWD}" -name ".DS_Store" -exec rm -v "{}" \;
+if [ -e "dist" ]; then rm -rf dist; fi
 ANDROID_SDK_ROOT="${HOME}/Library/Android/sdk/"
 if [ ! -d "${ANDROID_SDK_ROOT}" ]; then mkdir -p "${ANDROID_SDK_ROOT}"; fi
 if [ ! -d "tmp" ]; then mkdir tmp; fi
 if [ ! -d "dist" ]; then mkdir dist; fi
 if [ ! -d "${ANDROID_SDK_ROOT}/emulator" ]; then
       emulator_url=https://dl.google.com/android/repository/emulator-darwin_aarch64-10696886.zip
-    if [ "$(arch)" !="arm64" ]; then
+    if [ "$(arch)" != "arm64" ]; then
       emulator_url=https://dl.google.com/android/repository/emulator-darwin_x64-10696886.zip
     fi
     if [ ! -e "tmp/emulator.zip" ]; then curl -s "${emulator_url}" -o tmp/emulator.zip; fi
@@ -149,16 +153,16 @@ echo
 if [ -z "$2" ]; then
     read -p "    请设置APP名称 示例: 三国志 战略版 : " -r appName
     msg_last 1
-    msg_ok "APP名称: ${appName}"
+else
+    appName=$2
+fi
+msg_ok "APP名称: ${appName}"
+
+if [ -z "$3" ]; then
     read -p "    请设置APP图标 将PNG图标文件拖动到这里, 然后回车; 没有的话就回车: " -r appIcons
     msg_last 1
 else
-    appName=$2
-    if [ -z "$3" ]; then
-        appIcons=""
-    else
-        appIcons=$3
-    fi
+    appIcons=$3
 fi
 
 app_id="$((RANDOM % 1000 + 1000))"
