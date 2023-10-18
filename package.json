@@ -5,6 +5,7 @@
   "description": "Emulator Runner",
   "main": "dist-electron/main/index.js",
   "author": "XRSec",
+  "email": "jalapeno1868@outlook.com",
   "license": "MIT",
   "private": true,
   "keywords": [
@@ -22,8 +23,17 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build && electron-builder",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "tsc test.ts && node test.js"
   },
+  "build": {
+      "extraResources": [
+        {
+          "from": "src/assets",
+          "to": ""
+        }
+      ]
+    },
   "devDependencies": {
     "@types/i18n": "^0.13.7",
     "@types/node": "^20.8.6",
@@ -31,6 +41,7 @@
     "@vitejs/plugin-vue": "^4.4.0",
     "electron": "^27.0.0",
     "electron-builder": "^24.6.4",
+    "ts-loader": "^9.5.0",
     "typescript": "^5.2.2",
     "vite": "^4.4.11",
     "vite-plugin-electron": "^0.14.1",
@@ -44,19 +55,7 @@
     "json5": "^2.2.3",
     "vue-router": "^4.2.5",
     "vue-toastification": "^2.0.0-rc.5",
+    "xml-js": "^1.6.11",
     "yaml": "^2.3.3"
-  },
-  "jdk": {
-    "linux": {
-      "arm64": "https://download.oracle.com/java/17/latest/jdk-17_linux-aarch64_bin.tar.gz",
-      "amd64": "https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.tar.gz"
-    },
-    "darwin": {
-      "arm64": "https://download.oracle.com/java/17/latest/jdk-17_macos-aarch64_bin.tar.gz",
-      "amd64": "https://download.oracle.com/java/17/latest/jdk-17_macos-x64_bin.tar.gz"
-    },
-    "windows": {
-      "arm64": "https://download.oracle.com/java/17/latest/jdk-17_windows-x64_bin.zip"
-    }
   }
 }

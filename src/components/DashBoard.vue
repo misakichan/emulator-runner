@@ -15,7 +15,6 @@ const logViewRaw = ref("")
 const logViewName = ref("")
 const emulatorLists = ref({} as { [key: string]: any });
 const emulatorPath = path.join(config.value.sdkPath, 'emulator/emulator')
-
 defineProps<{ msg: string }>()
 
 function logViewClose() {
@@ -49,6 +48,7 @@ function emulatorListApp() {
         }
       })
       let avdIcon = path.join(line, '../../../Resources/ApplicationStub.png')
+      let execAPP = path.join(line, '../../../MacOS/runemu')
       try {
         fs.accessSync(avdIcon, fs.constants.F_OK);
         avdIcon = "file://" + avdIcon
@@ -62,9 +62,18 @@ function emulatorListApp() {
           name: display_name,
           icon: avdIcon,
           config: path.join(line, 'config.ini'),
+          execAPP: execAPP,
           pid: 0,
           logs: ''
         }
+      } else {
+        emulatorLists.value[avdID].avd ||= avdID
+        emulatorLists.value[avdID].name ||= display_name
+        emulatorLists.value[avdID].icon ||= avdIcon
+        emulatorLists.value[avdID].config ||= path.join(line, 'config.ini')
+        emulatorLists.value[avdID].pid ||= 0
+        emulatorLists.value[avdID].logs ||= ''
+        emulatorLists.value[avdID].execAPP ||= execAPP
       }
     })
     console.debug(emulatorLists.value)
@@ -103,7 +112,20 @@ function getEmulatorRunners() {
       if (processMessage.length < 5) {
         return
       }
-      emulatorLists.value[processMessage[5]].pid = processMessage[0]
+      console.log(line)
+      const matchResult = line.match(/-avd\s+([\w\d_]+)/);
+      const avdName = matchResult && matchResult[1];
+      let done = false
+      Object.values(emulatorLists).forEach((item: any) => {
+        if (item.avd === avdName) {
+          item.pid = processMessage[0]
+          done = true
+        }
+      })
+      if (!done) {
+        console.log(emulatorLists.value, emulatorLists.value[avdName])
+        emulatorLists.value[avdName] ||= {pid: processMessage[0], avd: avdName,}
+      }
     })
   })
 }
@@ -126,7 +148,7 @@ function stopEmulator(name: string) {
 function startEmulator(name: string) {
   emulatorLists.value[name].logs = emulatorLists.value[name].logs.concat("\n------------------\n")
   // 命令行提示: https://developer.android.com/studio/run/emulator-commandline?hl=zh-cn
-  const childProcess = exec(`${emulatorPath} -avd ${name}`, (err: any) => {
+  const childProcess = exec(`bash ${emulatorLists.value[name].execAPP}`, (err: any) => {
     if (err) {
       emulatorLists.value[name].logs = emulatorLists.value[name].logs.concat(err.message)
       if (err.message.includes('same AVD')) {

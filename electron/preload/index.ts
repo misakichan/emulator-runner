@@ -83,7 +83,6 @@ function useLoading() {
 }
 
 // ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
 
 const {appendLoading, removeLoading} = useLoading()
 domReady().then(appendLoading)

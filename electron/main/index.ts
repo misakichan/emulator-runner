@@ -17,7 +17,7 @@ import i18n from "i18n";
 import os from "os";
 import {spawn} from "child_process";
 import * as fs from "fs";
-import {string} from "yaml/dist/schema/common/string";
+import {xml2json} from "xml-js";
 
 // The built directory structure
 //
@@ -32,7 +32,7 @@ import {string} from "yaml/dist/schema/common/string";
 
 process.env.DIST_ELECTRON = join(__dirname, '..')
 process.env.DIST = join(process.env.DIST_ELECTRON, '../dist')
-process.env.PUBLIC = process.env.VITE_DEV_SERVER_URL
+process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
     ? join(process.env.DIST_ELECTRON, '../public')
     : process.env.DIST
 
@@ -45,7 +45,7 @@ if (!gotTheLock) {
 // 多语言化
 i18n.configure({
     locales: ["zh-CN", "en-US"],
-    directory: path.join(app.getAppPath(), "locales"), // TODO 这里有文件位置
+    directory: path.join(process.env.VITE_PUBLIC, "locales"), // TODO 这里有文件位置
     defaultLocale: 'en-US',
     register: global,
 });
@@ -61,7 +61,7 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
     process.exit(0)
 }
-let configFilePath = path.join(app.getAppPath(), 'config.json')
+let configFilePath = path.join(process.env.VITE_PUBLIC, 'config.json')
 let staticPath = path.join(app.getAppPath(), '/src/static')
 let tmp_path = app.getAppPath()
 if (tmp_path.includes('/Contents/Resources/')) {
@@ -82,8 +82,14 @@ switch (process.platform) {
     default:
         console.log('Unknown platform ' + process.platform);
 }
-console.log(app.getAppPath())
-const configDateDefault = {"configFilePath": configFilePath, "sdkPath": sdkPath, "languageSelected": "auto", "staticPath": staticPath}
+
+// xml2json(fs.readFileSync(path.join(app.getAppPath(), 'addons_list-5.xml')).toString(), {compact: true, spaces: 4});
+let configDateDefault = {
+    "configFilePath": configFilePath,
+    "sdkPath": sdkPath,
+    "languageSelected": "auto",
+    "VITE_PUBLIC": process.env.VITE_PUBLIC,
+}
 // ----------------------------------------------------------------------
 
 // Remove electron security warnings
@@ -130,7 +136,7 @@ async function createWindow() {
         // autoHideMenuBar: true,
         // frame: true,
         titleBarStyle: 'hiddenInset',
-        icon: path.join(__dirname, 'assets/icon.png'),
+        icon: join(process.env.VITE_PUBLIC, 'icon.png'),
         webPreferences: {
             preload,
             // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
@@ -174,7 +180,7 @@ app.whenReady().then(() => {
         createWindow();
         // --------------------------------托盘--------------------------------
 
-        const trayModel = new Tray(path.join(__dirname, '../../src/static/tray.png'))
+        const trayModel = new Tray(path.join(process.env.VITE_PUBLIC, 'tray.png'))
         const contextMenu = Menu.buildFromTemplate([
             {
                 role: 'quit',
@@ -323,8 +329,9 @@ function getConfigHandle(): { error: Error, msg: string, result: any } {
         configJson = JSON.parse(fs.readFileSync(configFilePath).toString());
         configJson.configFilePath = configFilePath;
         configJson.sdkPath = sdkPath;
-        configJson.staticPath = staticPath;
+        configJson.VITE_PUBLIC = process.env.VITE_PUBLIC;
     } catch (e) {
+        console.log(e)
         return {
             error: e,
             msg: i18n.__('readConfigError'),

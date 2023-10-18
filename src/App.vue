@@ -22,7 +22,7 @@ const menuItems = [
 
 <template>
   <div class="sidebar">
-    <img src="./static/icon.png" alt="logo" class="sidebar-logo">
+    <img src="./assets/icon.png" alt="logo" class="sidebar-logo">
     <ul class="sidebar-menu">
       <li v-for="item in menuItems" class="item">
         <a :class="{ 'active': item.path === currentRoute() }" @click="router.push(item.path)">

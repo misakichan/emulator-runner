@@ -14,13 +14,13 @@
     "locales"
   ],
   "mac": {
-    "artifactName": "${productName}_${version}.${ext}",
+    "artifactName": "${productName}-Mac-${version}-Installer.${ext}",
     "target": [
       "dmg",
       "zip"
     ],
     "darkModeSupport": true,
-    "icon": "src/static/icon.icns",
+    "icon": "src/assets/icon.icns",
     "category": "public.app-category.productivity"
   },
   "win": {
@@ -33,15 +33,16 @@
         ]
       }
     ],
-    "icon": "src/static/icon.ico",
-    "artifactName": "${productName}_${version}.${ext}"
+    "icon": "src/assets/icon.ico",
+    "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
   },
   "linux": {
     "target": [
       "deb",
       "rpm"
     ],
-    "icon": "src/static/icon.png"
+    "icon": "src/assets/icon.png",
+    "artifactName": "${productName}-Linux-${version}.${ext}"
   },
   "nsis": {
     "oneClick": false,

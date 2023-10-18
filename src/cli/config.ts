@@ -1,13 +1,15 @@
 import {ipcRenderer} from 'electron';
 import {useToast} from "vue-toastification";
 import {t} from './i18n'
-import {it} from "node:test";
+import fs from "fs";
+import path from "path";
 
 const toast = useToast()
 
 export function getConfig(): any {
     let item = ipcRenderer.sendSync('getConfig', null);
     if (item.error) {
+        console.log(item.error)
         toast.error(item.msg)
     }
     return item.result
