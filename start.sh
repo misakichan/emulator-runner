@@ -59,7 +59,7 @@ msg_info 正在初始化资源文件
 echo
 find "${PWD}" -name ".DS_Store" -exec rm -v "{}" \;
 if [ -e "dist" ]; then rm -rf dist; fi
-ANDROID_SDK_ROOT="${HOME}/Library/Android/sdk/"
+ANDROID_SDK_ROOT="${HOME}/Library/Android/sdk"
 if [ ! -d "${ANDROID_SDK_ROOT}" ]; then mkdir -p "${ANDROID_SDK_ROOT}"; fi
 if [ ! -d "tmp" ]; then mkdir tmp; fi
 if [ ! -d "dist" ]; then mkdir dist; fi
