@@ -1,0 +1,58 @@
+/**
+ * @see https://www.electron.build/configuration/configuration
+ */
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.xrsec.${name}",
+  "asar": true,
+  "directories": {
+    "output": "release/${version}"
+  },
+  "files": [
+    "dist-electron",
+    "dist",
+    "locales"
+  ],
+  "extraResources": [
+    {
+      "from": "config.json",
+      "to": ".."
+    }
+  ],
+  "mac": {
+    "artifactName": "${productName}-Mac-${version}-Installer.${ext}",
+    "target": [
+      "dmg"
+    ],
+    "darkModeSupport": true,
+    "icon": "src/assets/icon.icns",
+    "category": "public.app-category.productivity"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64",
+          "arm64"
+        ]
+      }
+    ],
+    "icon": "src/assets/icon.ico",
+    "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
+  },
+  "linux": {
+    "target": [
+      "deb",
+      "rpm"
+    ],
+    "icon": "src/assets/icon.png",
+    "artifactName": "${productName}-Linux-${version}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false
+  }
+}

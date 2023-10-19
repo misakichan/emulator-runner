@@ -165,57 +165,6 @@ function githubSelectedUpdate(key: string, open: boolean, custom: boolean) {
             </div>
           </div>
         </div>
-        <!--                <div class="flex flex-wrap">-->
-        <!--                    <div class="flex w-full items-center justify-between py-3 px-8 md:w-1/2">-->
-        <!--                        <span class="label font-bold">{{ t('proxy') }}</span>-->
-        <!--                        <input v-model="proxySelected" class="Selected" placeholder="socks5://127.0.0.1:7890"-->
-        <!--                               @keydown.enter="proxySelectedUpdate"-->
-        <!--                               @blur="proxySelectedUpdate"-->
-        <!--                        >-->
-        <!--                    </div>-->
-        <!--                </div>-->
-        <div class="flex flex-wrap">
-          <div class="flex w-full items-center justify-between py-3 px-8 md:w-1/2">
-            <span class="label font-bold">允许来自局域网的连接</span>
-            <div class="switch checked">
-              <i class="clash-iconfont icon-check switch-icon font-bold" type="check" size="20"
-                 style="font-size: 20px;"></i>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card settings-card">
-        <div class="flex flex-wrap">
-          <div class="flex w-full items-center justify-between py-3 px-8 md:w-1/2">
-            <span class="label font-bold">代理模式</span>
-            <div class="button-select">
-              <button value="Global" class="button-select-options">全局</button>
-              <button value="Rule" class="button-select-options actived">规则</button>
-              <button value="Direct" class="button-select-options">直连</button>
-            </div>
-          </div>
-          <div class="flex w-full items-center justify-between py-3 px-8 md:w-1/2">
-            <span class="label font-bold">Socks5 代理端口</span>
-            <input class="input text-center w-28" type="text" value="0"/>
-          </div>
-        </div>
-        <div class="flex flex-wrap">
-          <div class="flex w-full items-center justify-between py-3 px-8 md:w-1/2">
-            <span class="label font-bold">HTTP 代理端口</span>
-            <input class="input text-center w-28" type="text" value="0"/>
-          </div>
-          <div class="flex w-full items-center justify-between py-3 px-8 md:w-1/2">
-            <span class="label font-bold">混合代理端口</span>
-            <input class="input text-center w-28" type="text" value="7890"/>
-          </div>
-        </div>
-        <div class="flex flex-wrap">
-          <div class="flex w-full items-center justify-between py-3 px-8 md:w-1/2">
-            <span class="label font-bold">外部控制设置</span>
-            <span class="external-controller">127.0.0.1:9090</span>
-          </div>
-          <div class="w-1/2 px-8"></div>
-        </div>
       </div>
     </div>
   </div>

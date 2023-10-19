@@ -10,13 +10,21 @@ function currentRoute() {
   return router.currentRoute.value.path
 }
 
-const menuItems = [
+let menuItems = [
   {text: t('dashboard'), path: "/"},
   {text: t('manage'), path: "/manage"},
-  {text: t('repo'), path: "/repo"},
+  {text: t('emulatorConfig'), path: "/config"},
   {text: t('setting'), path: "/setting"},
   {text: t('about'), path: "/about"},
 ]
+
+function showMenu(path: string) {
+  if (path === "/config") {
+    return path === currentRoute()
+  }
+  return true
+}
+
 // console.log(`app path is __dirname ${__dirname} __filename ${__filename} ipcRenderer.invoke('getAppPath') ${ipcRenderer.invoke('getAppPath')}`)
 </script>
 
@@ -24,7 +32,7 @@ const menuItems = [
   <div class="sidebar">
     <img src="./assets/icon.png" alt="logo" class="sidebar-logo">
     <ul class="sidebar-menu">
-      <li v-for="item in menuItems" class="item">
+      <li v-for="item in menuItems" class="item" v-show="showMenu(item.path)">
         <a :class="{ 'active': item.path === currentRoute() }" @click="router.push(item.path)">
           {{ item.text }}
         </a>

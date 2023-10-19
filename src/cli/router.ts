@@ -1,7 +1,7 @@
 import {createRouter, createWebHashHistory} from "vue-router";
 import dashboard from "../components/DashBoard.vue";
 import manage from "../components/Manage.vue";
-import repo from "../components/Repo.vue";
+import emulatorConfig from "../components/EmulateConfig.vue";
 import setting from "../components/Setting.vue";
 import about from "../components/About.vue";
 
@@ -18,9 +18,9 @@ const routes = [
         component: manage
     },
     {
-        path: '/repo',
-        name: 'repo',
-        component: repo
+        path: '/config',
+        name: 'config',
+        component: emulatorConfig
     },
     {
         path: '/setting',

@@ -4,8 +4,9 @@ import {t} from '../cli/i18n'
 import {getConfig} from "../cli/config";
 import {useToast} from "vue-toastification";
 import {ref, WatchStopHandle, watch} from 'vue'
-import * as fs from "fs";
+import {accessSync, readdirSync, readFileSync, lstatSync, promises, readdir, stat, statSync, constants} from "fs";
 import {exec} from "child_process";
+import {router} from "../cli/router";
 
 const toast = useToast()
 
@@ -14,7 +15,7 @@ const config = ref(getConfig())
 const logViewRaw = ref("")
 const logViewName = ref("")
 const emulatorLists = ref({} as { [key: string]: any });
-const emulatorPath = path.join(config.value.sdkPath, 'emulator/emulator')
+const emulatorPath = path.join(process.env.sdkPath ?? "异常路径", 'emulator/emulator')
 defineProps<{ msg: string }>()
 console.log(config.value)
 
@@ -24,8 +25,55 @@ function logViewClose() {
   stopWatch()
 }
 
+
+async function findAvdFiles(dir: string, depth: number, callback: (filePath: string) => void,): Promise<void> {
+  if (depth > 8) {
+    return;
+  }
+
+  const files = await promises.readdir(dir);
+
+  for (const file of files) {
+    if (file.endsWith('.avd')) {
+      callback(path.join(dir, file));
+    }
+  }
+
+  for (const file of files) {
+    if (file === '.DS_Store') {
+      continue;
+    }
+
+    const filePath = path.join(dir, file);
+
+    if (depth > 3 && !filePath.includes('.app')) {
+      continue;
+    }
+
+    if (file === 'Contents') {
+      depth = 5;
+    }
+
+    const fileStat = await promises.stat(filePath);
+
+    if (fileStat.isDirectory()) {
+      try {
+        const linkStat = await promises.lstat(filePath);
+        if (linkStat.isSymbolicLink()) {
+          continue;
+        }
+      } catch (error) {
+        continue; // 如果 lstat 报错，说明文件不存在或者无权限访问，直接跳过
+      }
+
+      await findAvdFiles(filePath, depth + 1, callback);
+    }
+  }
+}
+
 function emulatorListApp() {
   let logs = ""
+  let timeLast = new Date();
   const childProcess = exec(`find /Applications -name "*.avd" -type d -mindepth 5 -maxdepth 8`)
   childProcess.stdout?.on('data', (data: any) => {
     logs = logs.concat(data.toString());
@@ -51,7 +99,7 @@ function emulatorListApp() {
       let avdIcon = path.join(line, '../../../Resources/ApplicationStub.png')
       let execAPP = path.join(line, '../../../MacOS/runemu')
       try {
-        fs.accessSync(avdIcon, fs.constants.F_OK);
+        accessSync(avdIcon, constants.F_OK);
         avdIcon = "file://" + avdIcon
       } catch (err) {
         avdIcon = "/src/static/icon.png";
@@ -82,7 +130,73 @@ function emulatorListApp() {
       toast.info(t('noEmulator'))
       return
     }
+    console.log("childProcess 耗时: " + (new Date().getTime() - timeLast.getTime()) + "ms");
   });
+
+  timeLast = new Date();
+  let fileLists: string[] = []
+  findAvdFiles('/Applications', 0, (filePath) => {
+    fileLists.push(filePath);
+  }).then(() => {
+    console.log("findAvdFiles 耗时: " + (new Date().getTime() - timeLast.getTime()) + "ms");
+    console.log('findAvdFiles:', fileLists)
+  });
+
+  readdir(`${process.env.HOME}/.android/avd`, (err, files) => {
+    if (err) {
+      console.error('无法读取目录:', err);
+      return;
+    }
+    files.forEach((file) => {
+      if (!file.includes('.avd')) {
+        return
+      }
+      stat(`${process.env.HOME}/.android/avd/${file}`, (err, stats) => {
+        if (err) {
+          console.error(`无法读取文件 ${file}:`, err);
+          return;
+        }
+        if (stats.isDirectory()) {
+          let avdID = file.replace('.avd', '')
+          let display_name = avdID
+          let avdIcon = "/icon.png"
+          let configPath = path.join(`${process.env.HOME}/.android/avd/${file}`, 'config.ini')
+          readFileSync(configPath, 'utf8').split('\n').filter((line: any) => {
+            if (line === "") {
+              return
+            }
+            if (line.includes('avd.ini.displayname')) {
+              display_name = line.replace('avd.ini.displayname=', '')
+              return;
+            }
+            // if (line.includes(process.env.HOME)) {
+            //   line.replace(process.env.HOME, '')
+            //   return
+            // } TODO 更新路径
+          })
+          if (emulatorLists.value[avdID] === undefined) {
+            emulatorLists.value[avdID] = {
+              avd: avdID,
+              name: display_name,
+              icon: avdIcon,
+              config: configPath,
+              execAPP: emulatorPath,
+              pid: 0,
+              logs: ''
+            }
+          } else {
+            emulatorLists.value[avdID].avd ||= avdID
+            emulatorLists.value[avdID].name ||= display_name
+            emulatorLists.value[avdID].icon ||= avdIcon
+            emulatorLists.value[avdID].config ||= configPath
+            emulatorLists.value[avdID].pid ||= 0
+            emulatorLists.value[avdID].logs ||= ''
+            emulatorLists.value[avdID].execAPP ||= emulatorPath
+          }
+        }
+      });
+    });
+  })
 }
 
 function getEmulatorLogs(name: string) {
@@ -170,6 +284,12 @@ function startEmulator(name: string) {
   });
 }
 
+function configEmulator(name: string) {
+  // open /emulateconfig
+  router.push('/config')
+  console.log(name)
+}
+
 emulatorListApp()
 getEmulatorRunners()
 </script>
@@ -199,7 +319,7 @@ getEmulatorRunners()
                 <div @click="getEmulatorLogs(key)">日志</div>
                 <div class="running" v-show="emulatorLists[key].pid!=0" @click="stopEmulator(key)">停止</div>
                 <div class="stopped" v-show="emulatorLists[key].pid==0" @click="startEmulator(key)">启动</div>
-                <div @click="">配置</div>
+                <div @click="configEmulator(key)">配置</div>
               </div>
             </li>
           </ul>
@@ -370,6 +490,13 @@ getEmulatorRunners()
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.info > h5:hover {
+  cursor: pointer; /* 鼠标经过按钮时鼠标指针形状变成手型 */
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .button {

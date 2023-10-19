@@ -37,7 +37,6 @@ process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
 process.env.configFilePath = process.env.VITE_DEV_SERVER_URL
     ? join(process.env.DIST_ELECTRON, '../config.json')
     : join(process.env.DIST_ELECTRON, '../../config.json')
-
 //禁止程序多开，此处需要单例锁的打开注释即可
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -70,16 +69,15 @@ if (tmp_path.includes('/Contents/Resources/')) {
     process.env.configFilePath = join(app.getAppPath(), '../../config.json')
     staticPath = join(app.getAppPath(), '../../Resources/')
 }
-let sdkPath: string;
 switch (process.platform) {
     case 'darwin':
-        sdkPath = join(os.homedir(), 'Library', 'Android', 'sdk');
+        process.env.sdkPath = join(os.homedir(), 'Library', 'Android', 'sdk');
         break;
     case 'win32':
-        sdkPath = join(os.homedir(), 'AppData', 'Local', 'Android', 'sdk');
+        process.env.sdkPath = join(os.homedir(), 'AppData', 'Local', 'Android', 'sdk');
         break;
     case 'linux':
-        sdkPath = join(os.homedir(), 'Android', 'sdk');
+        process.env.sdkPath = join(os.homedir(), 'Android', 'sdk');
         break;
     default:
         console.log('Unknown platform ' + process.platform);
@@ -87,10 +85,7 @@ switch (process.platform) {
 
 // xml2json(readFileSync(join(app.getAppPath(), 'addons_list-5.xml')).toString(), {compact: true, spaces: 4});
 let configDateDefault = {
-    "configFilePath": process.env.configFilePath,
-    "sdkPath": sdkPath,
     "languageSelected": "auto",
-    "VITE_PUBLIC": process.env.VITE_PUBLIC,
 }
 // ----------------------------------------------------------------------
 
@@ -329,9 +324,6 @@ function getConfigHandle(): { error: Error, msg: string, result: any } {
     let configJson: any
     try {
         configJson = JSON.parse(readFileSync(process.env.configFilePath).toString());
-        configJson.configFilePath = process.env.configFilePath;
-        configJson.sdkPath = sdkPath;
-        configJson.VITE_PUBLIC = process.env.VITE_PUBLIC;
     } catch (e) {
         console.log(e)
         return {
