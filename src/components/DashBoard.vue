@@ -16,6 +16,7 @@ const logViewName = ref("")
 const emulatorLists = ref({} as { [key: string]: any });
 const emulatorPath = path.join(config.value.sdkPath, 'emulator/emulator')
 defineProps<{ msg: string }>()
+console.log(config.value)
 
 function logViewClose() {
   logViewName.value = '';
@@ -123,7 +124,6 @@ function getEmulatorRunners() {
         }
       })
       if (!done) {
-        console.log(emulatorLists.value, emulatorLists.value[avdName])
         emulatorLists.value[avdName] ||= {pid: processMessage[0], avd: avdName,}
       }
     })

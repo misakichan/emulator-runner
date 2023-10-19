@@ -55,6 +55,71 @@ let system_image_google_apis_xml_status = false;
 let system_image_google_apis_playstore_xml_url = '';
 let system_image_google_apis_playstore_xml_json = {};
 let system_image_google_apis_playstore_xml_status = false;
+let getDefaultSystemImageURLStatus = false;
+let getGoogleApisSystemImageURLStatus = false;
+let getGoogleApisPlayStoreSystemImageURLStatus = false;
+let configJsons = JSON.parse(fs.readFileSync('config.json', 'utf8')) || {};
+if (!configJsons["system-images"]) {
+    configJsons["system-images"] = {
+        "22": {
+            default: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            },
+            google_apis: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            },
+            google_apis_playstore: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            }
+        },
+        "25": {
+            default: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            },
+            google_apis: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            },
+            google_apis_playstore: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            }
+        },
+        "28": {
+            default: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            },
+            google_apis: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            },
+            google_apis_playstore: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            }
+        },
+        "33": {
+            default: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            },
+            google_apis: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            },
+            google_apis_playstore: {
+                'x86_64': {},
+                'arm64-v8a': {},
+            }
+        },
+    }
+}
+
 
 function sendHttpRequest(url, function_name, callback) {
     console.log(`${function_name} doing`)
@@ -125,7 +190,6 @@ function getSystemImageXML() {
             system_image_default_xml_json = modified_json;
             system_image_default_xml_status = modified_status;
         })
-        console.log(system_image_google_apis_xml_url)
         sendHttpRequest(system_image_google_apis_xml_url, 'getSystemImageXML google_apis', (modified_json: Object, modified_status: boolean) => {
             system_image_google_apis_xml_json = modified_json;
             system_image_google_apis_xml_status = modified_status;
@@ -138,64 +202,6 @@ function getSystemImageXML() {
 }
 
 function getSystemImageURL() {
-    let tmp_jsons = {
-        "22": {
-            default: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            },
-            google_apis: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            },
-            google_apis_playstore: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            }
-        },
-        "25": {
-            default: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            },
-            google_apis: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            },
-            google_apis_playstore: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            }
-        },
-        "28": {
-            default: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            },
-            google_apis: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            },
-            google_apis_playstore: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            }
-        },
-        "33": {
-            default: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            },
-            google_apis: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            },
-            google_apis_playstore: {
-                'x86_64': {},
-                'arm64-v8a': {},
-            }
-        },
-    };
     (async () => {
         while (!system_image_default_xml_status) {
             await new Promise(resolve => setTimeout(resolve, 500)); // 延时1秒
@@ -215,20 +221,23 @@ function getSystemImageURL() {
             if (sites[i]['type-details']['codename']) {
                 continue
             }
-            if (!tmp_jsons[api_level]) {
+            if (!configJsons["system-images"][api_level]) {
                 continue
             }
             let os_args = sites[i]['archives']['archive'];
+            configJsons["system-images"][api_level]['default'][abi]['path'] = (sites[i]['_attributes']['path'] ||= "异常路径").replaceAll(";", "/")
             if (os_args instanceof Array) {
                 Object.values(os_args).forEach((value, index) => {
-                    tmp_jsons[api_level]['default'][abi][value['host-os']['_text']] = google_main_site + "sys-img/android/" + value['complete']['url']['_text'];
+                    configJsons["system-images"][api_level]['default'][abi][value['host-os']['_text']] = google_main_site + "sys-img/android/" + value['complete']['url']['_text'];
                 });
             } else if (os_args instanceof Object) {
-                tmp_jsons[api_level]['default'][abi]["custom"] = google_main_site + "sys-img/android/" + os_args['complete']['url']['_text'];
+                configJsons["system-images"][api_level]['default'][abi]["custom"] = google_main_site + "sys-img/default/" + os_args['complete']['url']['_text']
             } else {
                 console.log(`getSystemImageURL default typeErr: ${os_args}`)
             }
         }
+        getDefaultSystemImageURLStatus = true;
+        console.log('getSystemImage default done')
     })();
     (async () => {
         while (!system_image_google_apis_xml_status) {
@@ -248,23 +257,26 @@ function getSystemImageURL() {
             if (sites[i]['type-details']['codename']) {
                 continue
             }
-            if (!tmp_jsons[api_level]) {
+            if (!configJsons["system-images"][api_level]) {
                 continue
             }
             let os_args = sites[i]['archives']['archive'];
+            configJsons["system-images"][api_level]['google_apis'][abi]['path'] = (sites[i]['_attributes']['path'] ||= "异常路径").replaceAll(";", "/")
             if (os_args instanceof Array) {
                 Object.values(os_args).forEach((value, index) => {
-                    tmp_jsons[api_level]['google_apis'][abi][value['host-os']['_text']] = google_main_site + "sys-img/google_apis/" + value['complete']['url']['_text'];
+                    configJsons["system-images"][api_level]['google_apis'][abi][value['host-os']['_text']] = google_main_site + "sys-img/google_apis/" + value['complete']['url']['_text'];
                 });
             } else if (os_args instanceof Object) {
-                tmp_jsons[api_level]['google_apis'][abi]["custom"] = google_main_site + "sys-img/google_apis/" + os_args['complete']['url']['_text'];
+                configJsons["system-images"][api_level]['google_apis'][abi]["custom"] = google_main_site + "sys-img/google_apis/" + os_args['complete']['url']['_text']
             } else {
                 console.log(`getSystemImageURL google_apis typeErr: ${os_args}`)
             }
         }
+        getGoogleApisSystemImageURLStatus = true;
+        console.log('getSystemImage google_apis done')
     })();
     (async () => {
-        while (!system_image_google_apis_xml_status) {
+        while (!system_image_google_apis_playstore_xml_status) {
             await new Promise(resolve => setTimeout(resolve, 500)); // 延时1秒
         }
         console.log('getSystemImage google_apis_playstore doing')
@@ -275,44 +287,50 @@ function getSystemImageURL() {
         for (let i = 0; i < sites.length; i++) {
             let api_level = sites[i]['type-details']['api-level']['_text'];
             let abi = sites[i]['type-details']['abi']['_text'];
-            if (api_level === '25') {
-                console.log(sites[i]['_attributes']['path'])
-            }
             if (abi !== 'x86_64' && abi !== 'arm64-v8a') {
                 continue
             }
-            if (api_level === '25') {
-                console.log(sites[i]['_attributes']['path'])
-            }
             if (sites[i]['type-details']['codename']) {
+                console.log(sites[i]['type-details']['codename'])
                 continue
             }
 
-            if (api_level === '25') {
-                console.log(sites[i]['_attributes']['path'])
-            }
-            if (!tmp_jsons[api_level]) {
+            if (!configJsons["system-images"][api_level]) {
                 continue
             }
-            if (api_level === '25') {
-                console.log(sites[i]['_attributes']['path'])
-            }
             let os_args = sites[i]['archives']['archive'];
+            configJsons["system-images"][api_level]['google_apis_playstore'][abi]['path'] = (sites[i]['_attributes']['path'] ||= "异常路径").replaceAll(";", "/")
             if (os_args instanceof Array) {
                 Object.values(os_args).forEach((value, index) => {
-                    tmp_jsons[api_level]['google_apis_playstore'][abi][value['host-os']['_text']] = google_main_site + "sys-img/google_apis_playstore/" + value['complete']['url']['_text'];
+                    console.log(1, os_args['complete']['url']['_text'])
+                    configJsons["system-images"][api_level]['google_apis_playstore'][abi][value['host-os']['_text']] = google_main_site + "sys-img/google_apis_playstore/" + value['complete']['url']['_text'];
                 });
             } else if (os_args instanceof Object) {
-                tmp_jsons[api_level]['google_apis_playstore'][abi]["custom"] = google_main_site + "sys-img/google_apis_playstore/" + os_args['complete']['url']['_text'];
+                console.log(2, os_args['complete']['url']['_text'])
+                configJsons["system-images"][api_level]['google_apis_playstore'][abi]["custom"] = google_main_site + "sys-img/google_apis_playstore/" + os_args['complete']['url']['_text']
             } else {
                 console.log(`getSystemImageURL google_apis_playstore typeErr: ${os_args}`)
             }
+            getGoogleApisPlayStoreSystemImageURLStatus = true;
         }
-        fs.writeFile('config.json', JSON.stringify(tmp_jsons), (err) => {
-        })
+        console.log('getSystemImage google_apis_playstore done')
     })();
 }
+
+function writeConfig() {
+    (async () => {
+            while (!getDefaultSystemImageURLStatus && !getGoogleApisSystemImageURLStatus && !getGoogleApisPlayStoreSystemImageURLStatus) {
+                await new Promise(resolve => setTimeout(resolve, 500)); // 延时1秒
+            }
+            console.log('writeConfig doing')
+            fs.writeFileSync('config.json', JSON.stringify(configJsons), 'utf8')
+            console.log('writeConfig done')
+        }
+    )();
+}
+
 
 initMainXml()
 getSystemImageXML()
 getSystemImageURL()
+writeConfig()

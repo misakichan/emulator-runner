@@ -11,12 +11,11 @@ import {
     Tray, dialog
 } from 'electron'
 import {release} from 'node:os'
-import {join} from 'node:path'
-import path from "path";
+import {join, dirname} from 'node:path'
 import i18n from "i18n";
 import os from "os";
 import {spawn} from "child_process";
-import * as fs from "fs";
+import {writeFileSync, readFileSync, existsSync} from "fs";
 import {xml2json} from "xml-js";
 
 // The built directory structure
@@ -35,6 +34,9 @@ process.env.DIST = join(process.env.DIST_ELECTRON, '../dist')
 process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
     ? join(process.env.DIST_ELECTRON, '../public')
     : process.env.DIST
+process.env.configFilePath = process.env.VITE_DEV_SERVER_URL
+    ? join(process.env.DIST_ELECTRON, '../config.json')
+    : join(process.env.DIST_ELECTRON, '../../config.json')
 
 //禁止程序多开，此处需要单例锁的打开注释即可
 const gotTheLock = app.requestSingleInstanceLock();
@@ -45,7 +47,7 @@ if (!gotTheLock) {
 // 多语言化
 i18n.configure({
     locales: ["zh-CN", "en-US"],
-    directory: path.join(process.env.VITE_PUBLIC, "locales"), // TODO 这里有文件位置
+    directory: join(process.env.VITE_PUBLIC, "locales"), // TODO 这里有文件位置
     defaultLocale: 'en-US',
     register: global,
 });
@@ -61,31 +63,31 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
     process.exit(0)
 }
-let configFilePath = path.join(process.env.VITE_PUBLIC, 'config.json')
-let staticPath = path.join(app.getAppPath(), '/src/static')
+
+let staticPath = join(app.getAppPath(), '/src/static')
 let tmp_path = app.getAppPath()
 if (tmp_path.includes('/Contents/Resources/')) {
-    configFilePath = path.join(app.getAppPath(), '../../config.json')
-    staticPath = path.join(app.getAppPath(), '../../Resources/')
+    process.env.configFilePath = join(app.getAppPath(), '../../config.json')
+    staticPath = join(app.getAppPath(), '../../Resources/')
 }
 let sdkPath: string;
 switch (process.platform) {
     case 'darwin':
-        sdkPath = path.join(os.homedir(), 'Library', 'Android', 'sdk');
+        sdkPath = join(os.homedir(), 'Library', 'Android', 'sdk');
         break;
     case 'win32':
-        sdkPath = path.join(os.homedir(), 'AppData', 'Local', 'Android', 'sdk');
+        sdkPath = join(os.homedir(), 'AppData', 'Local', 'Android', 'sdk');
         break;
     case 'linux':
-        sdkPath = path.join(os.homedir(), 'Android', 'sdk');
+        sdkPath = join(os.homedir(), 'Android', 'sdk');
         break;
     default:
         console.log('Unknown platform ' + process.platform);
 }
 
-// xml2json(fs.readFileSync(path.join(app.getAppPath(), 'addons_list-5.xml')).toString(), {compact: true, spaces: 4});
+// xml2json(readFileSync(join(app.getAppPath(), 'addons_list-5.xml')).toString(), {compact: true, spaces: 4});
 let configDateDefault = {
-    "configFilePath": configFilePath,
+    "configFilePath": process.env.configFilePath,
     "sdkPath": sdkPath,
     "languageSelected": "auto",
     "VITE_PUBLIC": process.env.VITE_PUBLIC,
@@ -180,7 +182,7 @@ app.whenReady().then(() => {
         createWindow();
         // --------------------------------托盘--------------------------------
 
-        const trayModel = new Tray(path.join(process.env.VITE_PUBLIC, 'tray.png'))
+        const trayModel = new Tray(join(process.env.VITE_PUBLIC, 'tray.png'))
         const contextMenu = Menu.buildFromTemplate([
             {
                 role: 'quit',
@@ -280,7 +282,7 @@ ipcMain.on('saveConfig', (event, args) => {
         return;
     }
     try {
-        fs.writeFileSync(configFilePath, args, {encoding: 'utf8', flag: 'w'})
+        writeFileSync(process.env.configFilePath, args, {encoding: 'utf8', flag: 'w'})
     } catch (e) {
         console.log(e)
         event.returnValue = {error: e, msg: i18n.__('saveConfigError'), result: args}
@@ -301,16 +303,16 @@ ipcMain.on('openConfig', (event, args) => {
     }
     if (process.platform === 'darwin') {
         // macOS 上使用默认应用程序打开文件
-        spawn('open', [path.dirname(configFilePath)]);
-        spawn('open', [configFilePath]);
+        spawn('open', [dirname(process.env.configFilePath)]);
+        spawn('open', [process.env.configFilePath]);
     } else if (process.platform === 'win32') {
         // Windows 上使用记事本打开文件
-        spawn('notepad.exe', [path.dirname(configFilePath)]);
-        spawn('explorer', [configFilePath]);
+        spawn('notepad.exe', [dirname(process.env.configFilePath)]);
+        spawn('explorer', [process.env.configFilePath]);
     } else {
         // Linux 上使用默认文本编辑器打开文件
-        spawn('xdg-open', [configFilePath]);
-        spawn('xdg-open', [configFilePath]);
+        spawn('xdg-open', [process.env.configFilePath]);
+        spawn('xdg-open', [process.env.configFilePath]);
     }
     item.msg = i18n.__('openConfigSuccess')
     item.result = args
@@ -326,8 +328,8 @@ function getConfigHandle(): { error: Error, msg: string, result: any } {
     }
     let configJson: any
     try {
-        configJson = JSON.parse(fs.readFileSync(configFilePath).toString());
-        configJson.configFilePath = configFilePath;
+        configJson = JSON.parse(readFileSync(process.env.configFilePath).toString());
+        configJson.configFilePath = process.env.configFilePath;
         configJson.sdkPath = sdkPath;
         configJson.VITE_PUBLIC = process.env.VITE_PUBLIC;
     } catch (e) {
@@ -348,10 +350,10 @@ function getConfigHandle(): { error: Error, msg: string, result: any } {
 }
 
 function initConfigHandle(): { error: Error, msg: string } {
-    if (!fs.existsSync(configFilePath)) {
+    if (!existsSync(process.env.configFilePath)) {
         console.log("initConfigHandle file")
         try {
-            fs.writeFileSync(configFilePath, JSON.stringify(configDateDefault), {
+            writeFileSync(process.env.configFilePath, JSON.stringify(configDateDefault), {
                 encoding: 'utf8',
                 flag: 'w'
             })
