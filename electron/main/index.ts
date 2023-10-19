@@ -182,7 +182,7 @@ app.whenReady().then(() => {
         createWindow();
         // --------------------------------托盘--------------------------------
 
-        const trayModel = new Tray(join(process.env.VITE_PUBLIC, 'tray.png'))
+        const trayModel = new Tray(join(__dirname, '../../src/assets/tray.png'))
         const contextMenu = Menu.buildFromTemplate([
             {
                 role: 'quit',

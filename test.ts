@@ -7,14 +7,6 @@ import exit = startup.exit;
 import {string} from "yaml/dist/schema/common/string";
 import {json} from "stream/consumers";
 
-const tmp_dir = 'tmp';
-if (!fs.existsSync(tmp_dir)) {
-    console.log(fs.mkdirSync(tmp_dir, {recursive: true}));
-    console.log('Directory created successfully.');
-} else {
-    console.log('Directory already exists.');
-}
-
 // let logs = "";
 // let doing = false;
 //
@@ -45,7 +37,6 @@ if (!fs.existsSync(tmp_dir)) {
 const google_main_site = 'https://dl.google.com/android/repository/'
 let main_xml_json;
 let main_xml_status = false;
-let system_image_play_store_json;
 let system_image_default_xml_url = '';
 let system_image_default_xml_json = {};
 let system_image_default_xml_status = false;
@@ -149,6 +140,14 @@ function sendHttpRequest(url, function_name, callback) {
 }
 
 function initMainXml() {
+    const tmp_dir = 'tmp';
+    if (!fs.existsSync(tmp_dir)) {
+        console.log(fs.mkdirSync(tmp_dir, {recursive: true}));
+        console.log('Directory created successfully.');
+    } else {
+        console.log('Directory already exists.');
+    }
+
     sendHttpRequest('addons_list-5.xml', 'initMainXml', (modified_json: Object, modified_status: boolean) => {
         main_xml_json = modified_json;
         main_xml_status = modified_status;
@@ -167,13 +166,16 @@ function getSystemImageXML() {
         }
         for (let i = 0; i < sites.length; i++) {
             let site_displayName = sites[i]['displayName']['_text'];
-            if (site_displayName.includes('Android System Images')) {
+            if (site_displayName === 'Android System Images') {
+                console.log('default', sites[i]['url']['_text'])
                 system_image_default_xml_url = sites[i]['url']['_text'];
             }
-            if (site_displayName.includes('Google API add-on System Images')) {
+            if (site_displayName === 'Google API add-on System Images') {
+                console.log('google_apis', sites[i]['url']['_text'])
                 system_image_google_apis_xml_url = sites[i]['url']['_text'];
             }
-            if (site_displayName.includes('Google API with Playstore System Images')) {
+            if (site_displayName === 'Google API with Playstore System Images') {
+                console.log('google_apis_playstore', sites[i]['url']['_text'])
                 system_image_google_apis_playstore_xml_url = sites[i]['url']['_text'];
             }
         }
@@ -291,7 +293,7 @@ function getSystemImageURL() {
                 continue
             }
             if (sites[i]['type-details']['codename']) {
-                console.log(sites[i]['type-details']['codename'])
+                console.log('google_apis_playstore', api_level, sites[i]['type-details']['codename']['_text'], 'not paired')
                 continue
             }
 
@@ -302,11 +304,9 @@ function getSystemImageURL() {
             configJsons["system-images"][api_level]['google_apis_playstore'][abi]['path'] = (sites[i]['_attributes']['path'] ||= "异常路径").replaceAll(";", "/")
             if (os_args instanceof Array) {
                 Object.values(os_args).forEach((value, index) => {
-                    console.log(1, os_args['complete']['url']['_text'])
                     configJsons["system-images"][api_level]['google_apis_playstore'][abi][value['host-os']['_text']] = google_main_site + "sys-img/google_apis_playstore/" + value['complete']['url']['_text'];
                 });
             } else if (os_args instanceof Object) {
-                console.log(2, os_args['complete']['url']['_text'])
                 configJsons["system-images"][api_level]['google_apis_playstore'][abi]["custom"] = google_main_site + "sys-img/google_apis_playstore/" + os_args['complete']['url']['_text']
             } else {
                 console.log(`getSystemImageURL google_apis_playstore typeErr: ${os_args}`)
@@ -328,7 +328,6 @@ function writeConfig() {
         }
     )();
 }
-
 
 initMainXml()
 getSystemImageXML()
