@@ -7,6 +7,7 @@ Android Studio Virtual Device Emulator Runner
 ## 调试须知
 1. Applications 文件夹下必须要有 类似 `Android Studio.app` 文件夹
 2. `Android Studio.app` 文件夹可以从 release 下载
+3. electron安装可使用镜像源`yarn config set electron_mirror https://npm.taobao.org/mirrors/electron/`
 
 ## TODO
 
